@@ -6,6 +6,7 @@ interface AuthUser {
   studentId: string;
   name: string;
   schoolCode: string | null;
+  role: string;
   merits: number;
   stamps: number;
 }
@@ -17,6 +18,7 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (user: AuthUser) => void;
   isLoading: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -65,8 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
+  const isAdmin = user?.role === "admin";
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, isLoading, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );
