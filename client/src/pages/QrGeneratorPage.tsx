@@ -1,13 +1,12 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { QRCodeSVG } from "qrcode.react";
-import { QrCode, Copy, Check, RefreshCw } from "lucide-react";
+import { QrCode, Copy, Check, RefreshCw, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
 
 export default function QrGeneratorPage() {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState<"checkin" | "stamp">("checkin");
   const [qrToken, setQrToken] = useState<string | null>(null);
@@ -39,9 +38,11 @@ export default function QrGeneratorPage() {
   return (
     <div className="pb-24 pt-5 px-4">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100">
-          <QrCode size={20} className="text-purple-500" />
-        </div>
+        <Link href="/admin">
+          <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center cursor-pointer hover-elevate">
+            <ArrowLeft size={16} className="text-gray-500" />
+          </div>
+        </Link>
         <div>
           <h1 className="text-xl font-bold text-gray-800">สร้าง QR Code</h1>
           <p className="text-xs text-gray-400 mt-0.5">สร้าง QR Code สำหรับให้นักเรียนสแกน</p>

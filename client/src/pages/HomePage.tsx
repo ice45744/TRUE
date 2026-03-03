@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, QrCode, Award, Recycle } from "lucide-react";
+import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Announcement } from "@shared/schema";
@@ -23,8 +23,8 @@ function formatDate(date: string | Date) {
 const quickActions = [
   { label: "บันทึกกิจกรรม", icon: ClipboardList, href: "/activities", bg: "bg-blue-50", iconColor: "text-blue-500", border: "border border-blue-100" },
   { label: "แจ้งเรื่องร้องเรียน", icon: AlertTriangle, href: "/report", bg: "bg-orange-50", iconColor: "text-orange-500", border: "border border-orange-100" },
-  { label: "สร้าง QR Code", icon: QrCode, href: "/qr-generator", bg: "bg-purple-50", iconColor: "text-purple-500", border: "border border-purple-100" },
   { label: "สแกนเช็คชื่อ", icon: BookOpen, href: "/activities", bg: "bg-green-50", iconColor: "text-green-600", border: "border border-green-100" },
+  { label: "ดูประกาศ", icon: Bell, href: "/announcements", bg: "bg-purple-50", iconColor: "text-purple-500", border: "border border-purple-100" },
 ];
 
 export default function HomePage() {

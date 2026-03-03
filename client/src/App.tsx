@@ -64,12 +64,12 @@ function AppShell() {
           <Route path="/announcements" component={() => <ProtectedRoute component={AnnouncementsPage} />} />
           <Route path="/report" component={() => <ProtectedRoute component={ReportPage} />} />
           <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
-          <Route path="/qr-generator" component={() => <ProtectedRoute component={QrGeneratorPage} />} />
           <Route path="/admin" component={() => <AdminRoute component={AdminDashboard} />} />
           <Route path="/admin/users" component={() => <AdminRoute component={AdminUsers} />} />
           <Route path="/admin/activities" component={() => <AdminRoute component={AdminActivities} />} />
           <Route path="/admin/announcements" component={() => <AdminRoute component={AdminAnnouncements} />} />
           <Route path="/admin/reports" component={() => <AdminRoute component={AdminReports} />} />
+          <Route path="/admin/qr" component={() => <AdminRoute component={QrGeneratorPage} />} />
           <Route component={NotFound} />
         </Switch>
         {user && !isAuth && !isAdminPage && <StudentBottomNav />}

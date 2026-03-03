@@ -71,7 +71,7 @@ export async function registerRoutes(
     res.json({ message: "ลบประกาศสำเร็จ" });
   });
 
-  app.post("/api/qr/generate", async (req, res) => {
+  app.post("/api/qr/generate", requireAdmin, async (req, res) => {
     const { type } = req.body;
     if (type !== "checkin" && type !== "stamp") {
       return res.status(400).json({ message: "ประเภท QR ไม่ถูกต้อง" });
