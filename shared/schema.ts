@@ -1,18 +1,82 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  id: varchar("id", { length: 36 }).primaryKey(),
+  studentId: text("student_id").notNull().unique(),
+  name: text("name").notNull(),
   password: text("password").notNull(),
+  schoolCode: text("school_code"),
+  merits: integer("merits").notNull().default(0),
+  stamps: integer("stamps").notNull().default(0),
+});
+
+export const announcements = pgTable("announcements", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  authorName: text("author_name").notNull().default("สภานักเรียน"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const activities = pgTable("activities", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: varchar("user_id", { length: 36 }).notNull(),
+  type: text("type").notNull(),
+  description: text("description").notNull(),
+  imageUrl: text("image_url"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const reports = pgTable("reports", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: varchar("user_id", { length: 36 }).notNull(),
+  category: text("category").notNull(),
+  details: text("details").notNull(),
+  imageUrl: text("image_url"),
+  imageLink: text("image_link"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
+  studentId: true,
+  name: true,
   password: true,
+  schoolCode: true,
+});
+
+export const loginSchema = z.object({
+  studentId: z.string().min(1, "กรุณากรอกรหัสนักเรียน"),
+  password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
+});
+
+export const insertAnnouncementSchema = createInsertSchema(announcements).pick({
+  title: true,
+  content: true,
+  authorName: true,
+});
+
+export const insertActivitySchema = createInsertSchema(activities).pick({
+  type: true,
+  description: true,
+  imageUrl: true,
+});
+
+export const insertReportSchema = createInsertSchema(reports).pick({
+  category: true,
+  details: true,
+  imageUrl: true,
+  imageLink: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;

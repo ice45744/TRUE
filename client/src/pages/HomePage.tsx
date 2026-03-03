@@ -1,0 +1,128 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, QrCode, Award, Recycle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Announcement } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
+import { th } from "date-fns/locale";
+
+function getInitials(name: string) {
+  const parts = name.trim().split(" ");
+  return parts.map(p => p[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function formatDate(date: string | Date) {
+  try {
+    return formatDistanceToNow(new Date(date), { addSuffix: true, locale: th });
+  } catch {
+    return "";
+  }
+}
+
+const quickActions = [
+  { label: "บันทึกกิจกรรม", icon: ClipboardList, href: "/activities", bg: "bg-blue-50", iconColor: "text-blue-500", border: "border border-blue-100" },
+  { label: "แจ้งเรื่องร้องเรียน", icon: AlertTriangle, href: "/report", bg: "bg-orange-50", iconColor: "text-orange-500", border: "border border-orange-100" },
+  { label: "คู่มือการใช้งาน", icon: BookOpen, href: "/guide", bg: "bg-gray-50", iconColor: "text-gray-500", border: "border border-gray-100" },
+  { label: "สแกนเช็คชื่อ", icon: QrCode, href: "/activities", bg: "bg-green-50", iconColor: "text-green-600", border: "border border-green-100" },
+];
+
+export default function HomePage() {
+  const { user } = useAuth();
+
+  const { data: announcements, isLoading } = useQuery<Announcement[]>({
+    queryKey: ["/api/announcements"],
+  });
+
+  const recent = announcements?.slice(0, 2) ?? [];
+
+  return (
+    <div className="pb-20">
+      <div className="relative overflow-hidden rounded-b-[2rem]"
+        style={{ background: "linear-gradient(135deg, #4F8EF7 0%, #1D4ED8 100%)", minHeight: 180 }}>
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: "white", transform: "translate(30%, -30%)" }} />
+        <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full opacity-10"
+          style={{ background: "white", transform: "translate(-30%, 40%)" }} />
+        <div className="relative px-5 pt-12 pb-16 flex items-start justify-between">
+          <div>
+            <p className="text-blue-100 text-sm font-medium mb-1">ยินดีต้อนรับกลับมา</p>
+            <h2 className="text-white text-xl font-bold leading-tight" data-testid="text-username">{user?.name}</h2>
+            <p className="text-blue-200 text-sm mt-1">รหัสนักเรียน: {user?.studentId}</p>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40">
+            <span className="text-white font-bold text-lg">{getInitials(user?.name ?? "")}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 -mt-8">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
+            <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center">
+              <Award size={24} className="text-yellow-500" />
+            </div>
+            <p className="text-2xl font-bold text-gray-800" data-testid="text-merits">{user?.merits ?? 0}</p>
+            <p className="text-xs text-gray-500 font-medium">แต้มความดี</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
+            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+              <Recycle size={24} className="text-green-500" />
+            </div>
+            <p className="text-2xl font-bold text-gray-800" data-testid="text-stamps">{user?.stamps ?? 0}</p>
+            <p className="text-xs text-gray-500 font-medium">แสตมป์ขยะ</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 mt-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Bell size={18} className="text-primary" />
+            <h3 className="font-bold text-gray-800 text-base">ประกาศจากสภานักเรียน</h3>
+          </div>
+          <Link href="/announcements" className="text-xs text-primary font-semibold flex items-center gap-0.5">
+            ดูทั้งหมด <ChevronRight size={14} />
+          </Link>
+        </div>
+
+        <div className="bg-white rounded-2xl" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          ) : recent.length === 0 ? (
+            <div className="py-10 text-center text-gray-400 text-sm">
+              ยังไม่มีประกาศใหม่
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {recent.map((ann) => (
+                <div key={ann.id} className="p-4">
+                  <p className="font-semibold text-gray-800 text-sm leading-tight mb-1">{ann.title}</p>
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-2">{ann.content}</p>
+                  <p className="text-[11px] text-gray-400">{formatDate(ann.createdAt)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="px-4 mt-5">
+        <div className="grid grid-cols-2 gap-3">
+          {quickActions.map(({ label, icon: Icon, href, bg, iconColor, border }) => (
+            <Link key={label} href={href}>
+              <div className={`${bg} ${border} rounded-2xl p-4 flex flex-col gap-3 cursor-pointer hover-elevate`}>
+                <Icon size={26} className={iconColor} />
+                <p className="text-sm font-semibold text-gray-700 leading-tight">{label}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

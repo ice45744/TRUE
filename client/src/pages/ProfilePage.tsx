@@ -1,0 +1,96 @@
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
+import { LogOut, User, Settings, Award, Recycle, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+
+function getInitials(name: string) {
+  const parts = name.trim().split(" ");
+  return parts.map(p => p[0]).join("").slice(0, 2).toUpperCase();
+}
+
+export default function ProfilePage() {
+  const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const handleLogout = () => {
+    logout();
+    setLocation("/auth");
+    toast({ title: "ออกจากระบบแล้ว", description: "ขอบคุณที่ใช้งาน S.T. ก้าวหน้า" });
+  };
+
+  if (!user) return null;
+
+  const initials = getInitials(user.name);
+  const hue = (user.studentId.charCodeAt(0) * 37) % 360;
+  const avatarBg = `hsl(${hue}, 70%, 55%)`;
+
+  return (
+    <div className="pb-24 pt-5 px-4">
+      <div className="flex flex-col items-center mb-6">
+        <div
+          className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-3"
+          style={{ background: `linear-gradient(135deg, ${avatarBg}, hsl(${hue + 30}, 70%, 45%))`, boxShadow: `0 4px 20px hsl(${hue}, 70%, 55%, 0.4)`, border: "4px solid white" }}
+          data-testid="avatar-profile">
+          {initials}
+        </div>
+        <h2 className="text-xl font-bold text-gray-800" data-testid="text-profile-name">{user.name}</h2>
+        <p className="text-sm text-gray-500 mt-0.5">รหัส: {user.studentId}</p>
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-100" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+        <div className="grid grid-cols-2 divide-x divide-gray-100">
+          <div className="flex flex-col items-center gap-2 pr-4">
+            <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center">
+              <Award size={20} className="text-yellow-500" />
+            </div>
+            <p className="text-2xl font-bold text-gray-800" data-testid="text-profile-merits">{user.merits}</p>
+            <p className="text-xs text-gray-500">แต้มความดี</p>
+          </div>
+          <div className="flex flex-col items-center gap-2 pl-4">
+            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+              <Recycle size={20} className="text-green-500" />
+            </div>
+            <p className="text-2xl font-bold text-gray-800" data-testid="text-profile-stamps">{user.stamps}</p>
+            <p className="text-xs text-gray-500">แสตมป์ขยะ</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 mb-4 divide-y divide-gray-50" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+        <button
+          data-testid="button-edit-profile"
+          className="w-full flex items-center gap-3 px-4 py-3.5 hover-elevate text-left">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+            <User size={16} className="text-blue-500" />
+          </div>
+          <span className="flex-1 text-sm font-medium text-gray-700">แก้ไขข้อมูลส่วนตัว</span>
+          <ChevronRight size={16} className="text-gray-400" />
+        </button>
+        <button
+          data-testid="button-settings"
+          className="w-full flex items-center gap-3 px-4 py-3.5 hover-elevate text-left">
+          <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
+            <Settings size={16} className="text-gray-500" />
+          </div>
+          <span className="flex-1 text-sm font-medium text-gray-700">ตั้งค่าระบบ</span>
+          <ChevronRight size={16} className="text-gray-400" />
+        </button>
+      </div>
+
+      <button
+        data-testid="button-logout"
+        onClick={handleLogout}
+        className="w-full bg-red-50 border border-red-100 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-red-500 font-semibold text-sm hover-elevate">
+        <LogOut size={16} />
+        ออกจากระบบ
+      </button>
+
+      <p className="text-center text-xs text-gray-400 mt-6">
+        S.T. Digital System v1.0.0<br />
+        พัฒนาโดยสภานักเรียนโรงเรียน
+      </p>
+    </div>
+  );
+}
