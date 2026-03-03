@@ -202,7 +202,11 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
-    const success = await storage.deleteUser(req.params.id);
+    const { id } = req.params;
+    if (typeof id !== "string") {
+      return res.status(400).json({ message: "ID ไม่ถูกต้อง" });
+    }
+    const success = await storage.deleteUser(id);
     if (!success) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
     res.json({ message: "ลบผู้ใช้สำเร็จ" });
   });
@@ -213,11 +217,15 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/activities/:id", requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    if (typeof id !== "string") {
+      return res.status(400).json({ message: "ID ไม่ถูกต้อง" });
+    }
     const { status } = req.body;
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
     }
-    const act = await storage.updateActivityStatus(req.params.id, status);
+    const act = await storage.updateActivityStatus(id, status);
     if (!act) return res.status(404).json({ message: "ไม่พบกิจกรรม" });
     res.json(act);
   });
@@ -228,11 +236,15 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/reports/:id", requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    if (typeof id !== "string") {
+      return res.status(400).json({ message: "ID ไม่ถูกต้อง" });
+    }
     const { status } = req.body;
     if (!["resolved", "rejected", "in_progress"].includes(status)) {
       return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
     }
-    const rpt = await storage.updateReportStatus(req.params.id, status);
+    const rpt = await storage.updateReportStatus(id, status);
     if (!rpt) return res.status(404).json({ message: "ไม่พบรายงาน" });
     res.json(rpt);
   });
