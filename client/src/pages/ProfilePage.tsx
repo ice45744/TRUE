@@ -63,7 +63,7 @@ export default function ProfilePage() {
             <p className="text-[10px] text-gray-500">แสตมป์</p>
           </div>
         </div>
-        <p className="text-[10px] text-center text-gray-400 mt-3">ทุก 10 แต้ม = 1 แสตมป์</p>
+        <p className="text-[10px] text-center text-gray-400 mt-3">ทุก 10 แต้มขยะ = 1 แสตมป์</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 mb-4 divide-y divide-gray-50" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>

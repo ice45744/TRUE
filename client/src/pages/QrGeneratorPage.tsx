@@ -298,7 +298,7 @@ export default function QrGeneratorPage() {
       <div className={`rounded-2xl p-4 mt-4 border ${tab === "checkin" ? "bg-blue-50 border-blue-100" : "bg-green-50 border-green-100"}`}>
         <p className={`text-xs leading-relaxed ${tab === "checkin" ? "text-blue-700" : "text-green-700"}`}>
           {tab === "checkin"
-            ? "💡 QR เช็คชื่อเป็นแบบถาวร ใช้ได้ทุกวัน เฉพาะ 06:00-08:00 น. นักเรียนแต่ละคนสแกนได้ 1 ครั้ง ทุก 10 แต้มความดี = 1 แสตมป์"
+            ? "💡 QR เช็คชื่อเป็นแบบถาวร ใช้ได้ทุกวัน เฉพาะ 06:00-08:00 น. นักเรียนแต่ละคนสแกนได้ 1 ครั้ง/วัน"
             : "💡 QR ธนาคารขยะใช้ได้แค่ 1 คน ต้องสร้างใหม่ทุกครั้ง ทุก 10 แต้มขยะ = 1 แสตมป์"}
         </p>
       </div>

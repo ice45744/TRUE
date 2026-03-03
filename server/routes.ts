@@ -139,9 +139,8 @@ export async function registerRoutes(
       await storage.createActivity(userId, { type: "checkin", description: "เช็คชื่อผ่าน QR Code (+1 แต้มความดี)" });
       const updated = await storage.updateUserMerits(userId, 1);
       const { password: _, ...safeUser } = updated!;
-      const stampMsg = updated!.merits % 10 === 0 ? " 🎉 ครบ 10 แต้ม ได้รับ 1 แสตมป์!" : "";
       res.json({
-        message: `เช็คชื่อสำเร็จ! ได้รับ 1 แต้มความดี (รวม ${updated!.merits} แต้ม)${stampMsg}`,
+        message: `เช็คชื่อสำเร็จ! ได้รับ 1 แต้มความดี (รวม ${updated!.merits} แต้ม)`,
         user: safeUser,
         type: "checkin",
       });

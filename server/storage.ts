@@ -174,15 +174,7 @@ export class MemStorage implements IStorage {
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {
     const user = this.users.get(id);
     if (!user) return undefined;
-    const newMerits = user.merits + amount;
-    const oldStampsFromMerits = Math.floor(user.merits / 10);
-    const newStampsFromMerits = Math.floor(newMerits / 10);
-    const stampGain = newStampsFromMerits - oldStampsFromMerits;
-    const updated = {
-      ...user,
-      merits: newMerits,
-      stamps: user.stamps + stampGain,
-    };
+    const updated = { ...user, merits: user.merits + amount };
     this.users.set(id, updated);
     return updated;
   }
