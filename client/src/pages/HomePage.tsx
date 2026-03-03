@@ -44,7 +44,7 @@ export default function HomePage() {
           style={{ background: "white", transform: "translate(30%, -30%)" }} />
         <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full opacity-10"
           style={{ background: "white", transform: "translate(-30%, 40%)" }} />
-        <div className="relative px-5 pt-12 pb-24 flex items-start justify-between">
+        <div className="relative px-5 pt-12 pb-8 flex items-start justify-between">
           <div>
             <p className="text-blue-100 text-sm font-medium mb-1">ยินดีต้อนรับกลับมา</p>
             <h2 className="text-white text-xl font-bold leading-tight" data-testid="text-username">{user?.name}</h2>
@@ -52,25 +52,6 @@ export default function HomePage() {
           </div>
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40">
             <span className="text-white font-bold text-lg">{getInitials(user?.name ?? "")}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 -mt-12">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
-            <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center">
-              <Award size={24} className="text-yellow-500" />
-            </div>
-            <p className="text-2xl font-bold text-gray-800" data-testid="text-merits">{user?.merits ?? 0}</p>
-            <p className="text-xs text-gray-500 font-medium">แต้มความดี</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-              <Recycle size={24} className="text-green-500" />
-            </div>
-            <p className="text-2xl font-bold text-gray-800" data-testid="text-stamps">{user?.stamps ?? 0}</p>
-            <p className="text-xs text-gray-500 font-medium">แสตมป์ขยะ</p>
           </div>
         </div>
       </div>
