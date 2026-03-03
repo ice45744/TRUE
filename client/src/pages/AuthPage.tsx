@@ -94,7 +94,7 @@ export default function AuthPage() {
                     <FormLabel className="text-gray-700 font-medium">รหัสนักเรียน</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <Input
                           data-testid="input-studentId"
                           placeholder="เช่น 12345"
@@ -110,7 +110,7 @@ export default function AuthPage() {
                     <FormLabel className="text-gray-700 font-medium">รหัสผ่าน</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <Input
                           data-testid="input-password"
                           type="password"
@@ -141,7 +141,7 @@ export default function AuthPage() {
                     <FormLabel className="text-gray-700 font-medium">ชื่อ-นามสกุล</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <Input
                           data-testid="input-name"
                           placeholder="ด.ช. ก้าวหน้า เรียนดี"
@@ -157,7 +157,7 @@ export default function AuthPage() {
                     <FormLabel className="text-gray-700 font-medium">รหัสนักเรียน</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <Input
                           data-testid="input-reg-studentId"
                           placeholder="12345"
@@ -173,7 +173,7 @@ export default function AuthPage() {
                     <FormLabel className="text-gray-700 font-medium">รหัสผ่าน</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <Input
                           data-testid="input-reg-password"
                           type="password"
@@ -190,7 +190,7 @@ export default function AuthPage() {
                     <FormLabel className="text-gray-700 font-medium">รหัสสำหรับสภานักเรียน (ถ้ามี)</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Shield size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Shield size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <Input
                           data-testid="input-schoolCode"
                           placeholder="เว้นว่างได้"
