@@ -12,6 +12,7 @@ import ActivitiesPage from "@/pages/ActivitiesPage";
 import AnnouncementsPage from "@/pages/AnnouncementsPage";
 import ReportPage from "@/pages/ReportPage";
 import ProfilePage from "@/pages/ProfilePage";
+import QrGeneratorPage from "@/pages/QrGeneratorPage";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -42,6 +43,7 @@ function AppShell() {
           <Route path="/announcements" component={() => <ProtectedRoute component={AnnouncementsPage} />} />
           <Route path="/report" component={() => <ProtectedRoute component={ReportPage} />} />
           <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+          <Route path="/qr-generator" component={() => <ProtectedRoute component={QrGeneratorPage} />} />
           <Route component={NotFound} />
         </Switch>
         {user && !isAuth && <BottomNav />}

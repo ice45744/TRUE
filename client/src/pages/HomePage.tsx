@@ -23,8 +23,8 @@ function formatDate(date: string | Date) {
 const quickActions = [
   { label: "บันทึกกิจกรรม", icon: ClipboardList, href: "/activities", bg: "bg-blue-50", iconColor: "text-blue-500", border: "border border-blue-100" },
   { label: "แจ้งเรื่องร้องเรียน", icon: AlertTriangle, href: "/report", bg: "bg-orange-50", iconColor: "text-orange-500", border: "border border-orange-100" },
-  { label: "คู่มือการใช้งาน", icon: BookOpen, href: "/guide", bg: "bg-gray-50", iconColor: "text-gray-500", border: "border border-gray-100" },
-  { label: "สแกนเช็คชื่อ", icon: QrCode, href: "/activities", bg: "bg-green-50", iconColor: "text-green-600", border: "border border-green-100" },
+  { label: "สร้าง QR Code", icon: QrCode, href: "/qr-generator", bg: "bg-purple-50", iconColor: "text-purple-500", border: "border border-purple-100" },
+  { label: "สแกนเช็คชื่อ", icon: BookOpen, href: "/activities", bg: "bg-green-50", iconColor: "text-green-600", border: "border border-green-100" },
 ];
 
 export default function HomePage() {

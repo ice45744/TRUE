@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sun, QrCode, Gift, Cloud } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { QrScanner } from "@/components/QrScanner";
 
 const MAX_STAMPS = 10;
 
@@ -25,21 +25,19 @@ function GoodnesTab() {
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("");
   const [imageLink, setImageLink] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
 
-  const checkinMutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/activities/${user!.id}`, {
-      type: "checkin",
-      description: "เช็คชื่อเข้าร่วมกิจกรรมหน้าเสาธง",
-    }),
+  const scanMutation = useMutation({
+    mutationFn: (token: string) => apiRequest("POST", "/api/qr/scan", { token, userId: user!.id }),
     onSuccess: async (res) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       updateUser(data.user);
       queryClient.invalidateQueries({ queryKey: ["/api/activities", user!.id] });
-      toast({ title: "เช็คชื่อสำเร็จ!", description: "คุณได้รับ 1 แต้มความดี" });
+      toast({ title: "สำเร็จ!", description: data.message });
     },
     onError: (err: any) => {
-      toast({ title: "เกิดข้อผิดพลาด", description: err.message, variant: "destructive" });
+      toast({ title: "ไม่สำเร็จ", description: err.message, variant: "destructive" });
     },
   });
 
@@ -63,8 +61,17 @@ function GoodnesTab() {
     },
   });
 
+  const handleScan = (data: string) => {
+    setShowScanner(false);
+    scanMutation.mutate(data);
+  };
+
   return (
     <div className="space-y-4">
+      {showScanner && (
+        <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
+      )}
+
       <div className="bg-yellow-50 rounded-2xl p-4 border border-yellow-100">
         <div className="flex items-center gap-2 mb-1">
           <Sun size={18} className="text-yellow-500" />
@@ -72,13 +79,13 @@ function GoodnesTab() {
         </div>
         <p className="text-xs text-gray-500 mb-3">สแกนคิวอาร์โค้ดกิจกรรมหน้าเสาธงเพื่อรับแต้มความดี 1 แต้ม</p>
         <Button
-          data-testid="button-checkin"
+          data-testid="button-checkin-scan"
           className="w-full rounded-xl h-11 font-semibold text-sm"
           style={{ background: "linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)", color: "white" }}
-          onClick={() => checkinMutation.mutate()}
-          disabled={checkinMutation.isPending}>
+          onClick={() => setShowScanner(true)}
+          disabled={scanMutation.isPending}>
           <QrCode size={16} className="mr-2" />
-          {checkinMutation.isPending ? "กำลังบันทึก..." : "สแกน QR เพื่อเช็คชื่อ"}
+          {scanMutation.isPending ? "กำลังบันทึก..." : "สแกน QR เพื่อเช็คชื่อ"}
         </Button>
       </div>
 
@@ -123,29 +130,36 @@ function StampTab() {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showScanner, setShowScanner] = useState(false);
 
   const stampsCount = user?.stamps ?? 0;
   const displayStamps = stampsCount % MAX_STAMPS;
 
-  const stampMutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/activities/${user!.id}`, {
-      type: "stamp",
-      description: "สแกน QR รับแสตมป์ขยะ",
-    }),
+  const scanMutation = useMutation({
+    mutationFn: (token: string) => apiRequest("POST", "/api/qr/scan", { token, userId: user!.id }),
     onSuccess: async (res) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       updateUser(data.user);
       queryClient.invalidateQueries({ queryKey: ["/api/activities", user!.id] });
-      toast({ title: "รับแสตมป์สำเร็จ!", description: "แสตมป์ขยะถูกเพิ่มแล้ว" });
+      toast({ title: "สำเร็จ!", description: data.message });
     },
     onError: (err: any) => {
-      toast({ title: "เกิดข้อผิดพลาด", description: err.message, variant: "destructive" });
+      toast({ title: "ไม่สำเร็จ", description: err.message, variant: "destructive" });
     },
   });
 
+  const handleScan = (data: string) => {
+    setShowScanner(false);
+    scanMutation.mutate(data);
+  };
+
   return (
     <div className="space-y-4">
+      {showScanner && (
+        <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
+      )}
+
       <div className="bg-white rounded-2xl p-4 border border-gray-100" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-gray-800 text-sm">บัตรสะสมแสตมป์</h3>
@@ -173,10 +187,10 @@ function StampTab() {
         <Button
           data-testid="button-scan-stamp"
           className="w-full rounded-xl h-11 font-semibold text-sm bg-gray-900"
-          onClick={() => stampMutation.mutate()}
-          disabled={stampMutation.isPending}>
+          onClick={() => setShowScanner(true)}
+          disabled={scanMutation.isPending}>
           <QrCode size={16} className="mr-2" />
-          {stampMutation.isPending ? "กำลังบันทึก..." : "สแกน QR รับแสตมป์"}
+          {scanMutation.isPending ? "กำลังบันทึก..." : "สแกน QR รับแสตมป์"}
         </Button>
       </div>
 
