@@ -57,6 +57,51 @@ export async function registerRoutes(
     res.status(201).json(ann);
   });
 
+  app.post("/api/qr/generate", async (req, res) => {
+    const { type } = req.body;
+    if (type !== "checkin" && type !== "stamp") {
+      return res.status(400).json({ message: "ประเภท QR ไม่ถูกต้อง" });
+    }
+    const qr = storage.createQrToken(type);
+    res.json({ token: qr.token, type: qr.type });
+  });
+
+  app.post("/api/qr/scan", async (req, res) => {
+    const { token, userId } = req.body;
+    if (!token || !userId) {
+      return res.status(400).json({ message: "ข้อมูลไม่ครบถ้วน" });
+    }
+    const qr = storage.getQrToken(token);
+    if (!qr) {
+      return res.status(404).json({ message: "QR Code ไม่ถูกต้องหรือหมดอายุ" });
+    }
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+    }
+    const success = storage.markQrUsed(token, userId);
+    if (!success) {
+      return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
+    }
+
+    const desc = qr.type === "checkin" ? "เช็คชื่อผ่าน QR Code" : "รับแสตมป์ขยะผ่าน QR Code";
+    await storage.createActivity(userId, { type: qr.type, description: desc });
+
+    if (qr.type === "checkin") {
+      await storage.updateUserMerits(userId, 1);
+    } else {
+      await storage.updateUserStamps(userId, 1);
+    }
+
+    const updatedUser = await storage.getUser(userId);
+    const { password: _, ...safeUser } = updatedUser!;
+    res.json({
+      message: qr.type === "checkin" ? "เช็คชื่อสำเร็จ! ได้รับ 1 แต้มความดี" : "รับแสตมป์สำเร็จ! ได้รับ 1 แสตมป์ขยะ",
+      user: safeUser,
+      type: qr.type,
+    });
+  });
+
   app.get("/api/activities/:userId", async (req, res) => {
     const acts = await storage.getActivities(req.params.userId);
     res.json(acts);

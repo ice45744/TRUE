@@ -6,6 +6,13 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
+export interface QrToken {
+  token: string;
+  type: "checkin" | "stamp";
+  createdAt: Date;
+  usedBy: Set<string>;
+}
+
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByStudentId(studentId: string): Promise<User | undefined>;
@@ -16,6 +23,10 @@ export interface IStorage {
   getAnnouncements(): Promise<Announcement[]>;
   getAnnouncement(id: string): Promise<Announcement | undefined>;
   createAnnouncement(a: InsertAnnouncement): Promise<Announcement>;
+
+  createQrToken(type: "checkin" | "stamp"): QrToken;
+  getQrToken(token: string): QrToken | undefined;
+  markQrUsed(token: string, userId: string): boolean;
 
   getActivities(userId: string): Promise<Activity[]>;
   createActivity(userId: string, a: InsertActivity): Promise<Activity>;
@@ -29,6 +40,7 @@ export class MemStorage implements IStorage {
   private announcements: Map<string, Announcement> = new Map();
   private activities: Map<string, Activity> = new Map();
   private reports: Map<string, Report> = new Map();
+  private qrTokens: Map<string, QrToken> = new Map();
 
   constructor() {
     this.seed();
@@ -135,6 +147,25 @@ export class MemStorage implements IStorage {
     };
     this.announcements.set(ann.id, ann);
     return ann;
+  }
+
+  createQrToken(type: "checkin" | "stamp"): QrToken {
+    const token = `st-${type}-${randomUUID().slice(0, 8)}`;
+    const qr: QrToken = { token, type, createdAt: new Date(), usedBy: new Set() };
+    this.qrTokens.set(token, qr);
+    return qr;
+  }
+
+  getQrToken(token: string): QrToken | undefined {
+    return this.qrTokens.get(token);
+  }
+
+  markQrUsed(token: string, userId: string): boolean {
+    const qr = this.qrTokens.get(token);
+    if (!qr) return false;
+    if (qr.usedBy.has(userId)) return false;
+    qr.usedBy.add(userId);
+    return true;
   }
 
   async getActivities(userId: string): Promise<Activity[]> {
