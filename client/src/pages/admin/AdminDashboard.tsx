@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Recycle, Clock, ChevronRight, LayoutDashboard } from "lucide-react";
+import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Recycle, Clock, ChevronRight, LayoutDashboard, LogOut } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Stats {
   totalStudents: number;
@@ -25,17 +26,26 @@ export default function AdminDashboard() {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/admin/stats"],
   });
+  const { user, logout } = useAuth();
 
   return (
     <div className="pb-24 pt-5 px-4">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center border border-indigo-200">
-          <LayoutDashboard size={20} className="text-indigo-600" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center border border-indigo-200">
+            <LayoutDashboard size={20} className="text-indigo-600" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">แผงควบคุม</h1>
+            <p className="text-xs text-gray-400">{user?.name ?? "Admin"}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">แผงควบคุม Admin</h1>
-          <p className="text-xs text-gray-400">จัดการระบบ S.T. ก้าวหน้า</p>
-        </div>
+        <button
+          data-testid="button-admin-logout"
+          onClick={logout}
+          className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center border border-red-100 text-red-400">
+          <LogOut size={16} />
+        </button>
       </div>
 
       {isLoading ? (

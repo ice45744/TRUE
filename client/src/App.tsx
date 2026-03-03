@@ -1,10 +1,10 @@
-import { Switch, Route, useLocation, Redirect } from "wouter";
+import { Switch, Route, useLocation, Redirect, Link } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { BottomNav } from "@/components/BottomNav";
+import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/AuthPage";
 import HomePage from "@/pages/HomePage";
@@ -59,10 +59,7 @@ function AppShell() {
       <div className="max-w-lg mx-auto relative min-h-screen bg-transparent">
         <Switch>
           <Route path="/auth" component={AuthPage} />
-          <Route path="/" component={() => {
-            if (user?.role === "admin") return <Redirect to="/admin" />;
-            return <ProtectedRoute component={HomePage} />;
-          }} />
+          <Route path="/" component={() => <ProtectedRoute component={HomePage} />} />
           <Route path="/activities" component={() => <ProtectedRoute component={ActivitiesPage} />} />
           <Route path="/announcements" component={() => <ProtectedRoute component={AnnouncementsPage} />} />
           <Route path="/report" component={() => <ProtectedRoute component={ReportPage} />} />
@@ -75,39 +72,77 @@ function AppShell() {
           <Route path="/admin/reports" component={() => <AdminRoute component={AdminReports} />} />
           <Route component={NotFound} />
         </Switch>
-        {user && !isAuth && !isAdminPage && !isAdmin && <BottomNav />}
+        {user && !isAuth && !isAdminPage && <StudentBottomNav />}
         {user && isAdmin && isAdminPage && <AdminBottomNav />}
       </div>
     </div>
   );
 }
 
-function AdminBottomNav() {
+function StudentBottomNav() {
+  const { isAdmin } = useAuth();
   const [location] = useLocation();
-  const { logout } = useAuth();
 
   const tabs = [
-    { href: "/admin", label: "แดชบอร์ด", icon: "LayoutDashboard" },
-    { href: "/admin/users", label: "นักเรียน", icon: "Users" },
-    { href: "/admin/activities", label: "กิจกรรม", icon: "ClipboardList" },
-    { href: "/admin/announcements", label: "ประกาศ", icon: "Megaphone" },
-    { href: "/admin/reports", label: "รายงาน", icon: "AlertTriangle" },
+    { href: "/", label: "หน้าหลัก", icon: Home },
+    { href: "/activities", label: "กิจกรรม", icon: ClipboardList },
+    { href: "/announcements", label: "ประกาศ", icon: Megaphone },
+    { href: "/report", label: "แจ้งปัญหา", icon: AlertTriangle },
+    ...(isAdmin
+      ? [{ href: "/admin", label: "แอดมิน", icon: ShieldCheck }]
+      : [{ href: "/profile", label: "โปรไฟล์", icon: User }]
+    ),
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50"
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-bottom"
       style={{ boxShadow: "0 -2px 16px rgba(0,0,0,0.06)" }}>
       <div className="flex items-center justify-around max-w-lg mx-auto">
-        {tabs.map(({ href, label }) => {
-          const active = href === "/admin" ? location === "/admin" : location.startsWith(href);
+        {tabs.map(({ href, label, icon: Icon }) => {
+          const active = href === "/" ? location === "/" : location.startsWith(href);
           return (
-            <a key={href} href={href}
+            <Link key={href} href={href}
+              data-testid={`nav-${label}`}
+              className={`flex flex-col items-center gap-0.5 py-2 px-3 flex-1 transition-colors ${
+                active ? "text-blue-600" : "text-gray-400"
+              }`}>
+              <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+              <span className="text-[10px] font-medium">{label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function AdminBottomNav() {
+  const [location] = useLocation();
+
+  const tabs = [
+    { href: "/admin", label: "แดชบอร์ด", icon: LayoutDashboard },
+    { href: "/admin/users", label: "นักเรียน", icon: Users },
+    { href: "/admin/activities", label: "กิจกรรม", icon: ClipboardList },
+    { href: "/admin/announcements", label: "ประกาศ", icon: Megaphone },
+    { href: "/", label: "แอป", icon: Home },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-bottom"
+      style={{ boxShadow: "0 -2px 16px rgba(0,0,0,0.06)" }}>
+      <div className="flex items-center justify-around max-w-lg mx-auto">
+        {tabs.map(({ href, label, icon: Icon }) => {
+          const isExact = href === "/admin" || href === "/";
+          const active = isExact ? location === href : location.startsWith(href);
+          return (
+            <Link key={href} href={href}
               data-testid={`admin-nav-${label}`}
-              className={`flex flex-col items-center gap-0.5 py-2 px-2 flex-1 transition-colors text-center ${
+              className={`flex flex-col items-center gap-0.5 py-2 px-3 flex-1 transition-colors ${
                 active ? "text-indigo-600" : "text-gray-400"
               }`}>
-              <span className="text-[10px] font-medium leading-tight">{label}</span>
-            </a>
+              <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+              <span className="text-[10px] font-medium">{label}</span>
+            </Link>
           );
         })}
       </div>
