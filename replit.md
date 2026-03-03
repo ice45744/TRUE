@@ -72,7 +72,7 @@ A Thai school student digital system for managing goodness activities, stamp col
 - `PATCH /api/admin/reports/:id` - Update report status {status: "in_progress"|"resolved"|"rejected"}
 
 ## Seed Data
-- Admin: studentId="admin", password="admin1234", role="admin"
+- Admin: ลงทะเบียนใหม่แล้วกรอกรหัสสภานักเรียน "สภานักเรียนปี2569/1_2" จะได้ role admin อัตโนมัติ
 - Student 1: studentId="19823", password="1234", name="Kittipot Ice"
 - Student 2: studentId="12345", password="1234", name="สมชาย ใจดี"
 - Student 3: studentId="11111", password="1234", name="สมหญิง รักเรียน"

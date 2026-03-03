@@ -54,19 +54,6 @@ export class MemStorage implements IStorage {
   }
 
   private seed() {
-    const adminId = randomUUID();
-    const admin: User = {
-      id: adminId,
-      studentId: "admin",
-      name: "ผู้ดูแลระบบ",
-      password: "admin1234",
-      schoolCode: "ST001",
-      role: "admin",
-      merits: 0,
-      stamps: 0,
-    };
-    this.users.set(adminId, admin);
-
     const user1Id = randomUUID();
     const user1: User = {
       id: user1Id,
@@ -156,13 +143,15 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
+    const isAdmin = insertUser.schoolCode === ADMIN_CODE;
     const user: User = {
       id,
       studentId: insertUser.studentId,
       name: insertUser.name,
       password: insertUser.password,
       schoolCode: insertUser.schoolCode ?? null,
-      role: "student",
+      role: isAdmin ? "admin" : "student",
       merits: 0,
       stamps: 0,
     };
