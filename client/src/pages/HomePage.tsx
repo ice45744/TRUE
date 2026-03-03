@@ -39,12 +39,12 @@ export default function HomePage() {
   return (
     <div className="pb-20">
       <div className="relative overflow-hidden rounded-b-[2rem]"
-        style={{ background: "linear-gradient(135deg, #4F8EF7 0%, #1D4ED8 100%)", minHeight: 180 }}>
+        style={{ background: "linear-gradient(135deg, #4F8EF7 0%, #1D4ED8 100%)" }}>
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
           style={{ background: "white", transform: "translate(30%, -30%)" }} />
         <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full opacity-10"
           style={{ background: "white", transform: "translate(-30%, 40%)" }} />
-        <div className="relative px-5 pt-12 pb-16 flex items-start justify-between">
+        <div className="relative px-5 pt-12 pb-24 flex items-start justify-between">
           <div>
             <p className="text-blue-100 text-sm font-medium mb-1">ยินดีต้อนรับกลับมา</p>
             <h2 className="text-white text-xl font-bold leading-tight" data-testid="text-username">{user?.name}</h2>
@@ -56,7 +56,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="px-4 -mt-8">
+      <div className="px-4 -mt-12">
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
             <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center">
