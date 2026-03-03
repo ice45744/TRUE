@@ -95,7 +95,7 @@ function StudentBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-bottom"
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 safe-bottom animate-nav-slide"
       style={{ boxShadow: "0 -2px 16px rgba(0,0,0,0.06)" }}>
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {tabs.map(({ href, label, icon: Icon }) => {
@@ -103,11 +103,14 @@ function StudentBottomNav() {
           return (
             <Link key={href} href={href}
               data-testid={`nav-${label}`}
-              className={`flex flex-col items-center gap-0.5 py-2 px-3 flex-1 transition-colors ${
+              className={`flex flex-col items-center gap-0.5 py-2 px-3 flex-1 transition-colors duration-200 ${
                 active ? "text-blue-600" : "text-gray-400"
               }`}>
-              <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+              <div className={`transition-transform duration-200 ${active ? "scale-110 -translate-y-0.5" : ""}`}>
+                <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+              </div>
               <span className="text-[10px] font-medium">{label}</span>
+              <div className={`nav-dot ${active ? "nav-dot-active bg-blue-600" : ""}`} />
             </Link>
           );
         })}
@@ -128,7 +131,7 @@ function AdminBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-bottom"
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 safe-bottom animate-nav-slide"
       style={{ boxShadow: "0 -2px 16px rgba(0,0,0,0.06)" }}>
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {tabs.map(({ href, label, icon: Icon }) => {
@@ -137,11 +140,14 @@ function AdminBottomNav() {
           return (
             <Link key={href} href={href}
               data-testid={`admin-nav-${label}`}
-              className={`flex flex-col items-center gap-0.5 py-2 px-3 flex-1 transition-colors ${
+              className={`flex flex-col items-center gap-0.5 py-2 px-3 flex-1 transition-colors duration-200 ${
                 active ? "text-indigo-600" : "text-gray-400"
               }`}>
-              <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+              <div className={`transition-transform duration-200 ${active ? "scale-110 -translate-y-0.5" : ""}`}>
+                <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+              </div>
               <span className="text-[10px] font-medium">{label}</span>
+              <div className={`nav-dot ${active ? "nav-dot-active bg-indigo-600" : ""}`} />
             </Link>
           );
         })}

@@ -63,8 +63,8 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden animate-scale-in">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Camera size={18} className="text-primary" />
@@ -73,7 +73,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
           <button
             data-testid="button-close-scanner"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center card-interactive">
             <X size={16} className="text-gray-500" />
           </button>
         </div>
@@ -89,7 +89,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
         </div>
 
         {error && (
-          <div className="p-4 text-center">
+          <div className="p-4 text-center animate-fade-in-up">
             <p className="text-red-500 text-sm mb-3">{error}</p>
             <Button
               data-testid="button-retry-scanner"

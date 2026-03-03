@@ -97,6 +97,16 @@ A Thai school student digital system for managing goodness activities, stamp col
 - Bottom tab navigation (5 tabs for students, 5 tabs for admin)
 - Admin can use both student and admin pages
 
+## Animations & Micro-interactions
+- CSS keyframe animations: fadeInUp, fadeIn, scaleIn, slideDown, bounceIn, float, shimmer, popIn, wiggle, navSlideUp
+- Animation classes: animate-fade-in-up, animate-fade-in, animate-scale-in, animate-slide-down, animate-bounce-in, animate-float, animate-pop-in, animate-wiggle, animate-nav-slide
+- Stagger classes: stagger-1 through stagger-6 (50ms increments)
+- Interactive classes: card-interactive (scale-down on active), gradient-shimmer, tab-indicator (smooth sliding tabs)
+- Bottom nav: Icon scale + translate on active state, nav-dot expanding indicator
+- Frosted glass nav: bg-white/95 backdrop-blur-md
+- prefers-reduced-motion: All animations disabled for accessibility
+- Loading spinners: Consistent white border-spinner pattern across all buttons
+
 ## Key Packages
 - html5-qrcode, qrcode.react (QR system)
 - date-fns (date formatting with Thai locale)
