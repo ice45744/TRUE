@@ -8,6 +8,7 @@ interface AuthUser {
   schoolCode: string | null;
   role: string;
   merits: number;
+  trashPoints: number;
   stamps: number;
 }
 

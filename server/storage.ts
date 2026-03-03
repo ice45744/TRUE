@@ -10,6 +10,7 @@ export interface QrToken {
   token: string;
   type: "checkin" | "stamp";
   createdAt: Date;
+  expiresAt: Date | null;
   usedBy: Set<string>;
 }
 
@@ -20,6 +21,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   deleteUser(id: string): Promise<boolean>;
   updateUserMerits(id: string, amount: number): Promise<User | undefined>;
+  updateUserTrashPoints(id: string, amount: number): Promise<User | undefined>;
   updateUserStamps(id: string, amount: number): Promise<User | undefined>;
 
   getAnnouncements(): Promise<Announcement[]>;
@@ -27,9 +29,10 @@ export interface IStorage {
   createAnnouncement(a: InsertAnnouncement): Promise<Announcement>;
   deleteAnnouncement(id: string): Promise<boolean>;
 
-  createQrToken(type: "checkin" | "stamp"): QrToken;
+  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): QrToken;
   getQrToken(token: string): QrToken | undefined;
   markQrUsed(token: string, userId: string): boolean;
+  getCheckinQr(): QrToken | undefined;
 
   getActivities(userId: string): Promise<Activity[]>;
   getAllActivities(): Promise<Activity[]>;
@@ -48,6 +51,7 @@ export class MemStorage implements IStorage {
   private activities: Map<string, Activity> = new Map();
   private reports: Map<string, Report> = new Map();
   private qrTokens: Map<string, QrToken> = new Map();
+  private permanentCheckinToken: string | null = null;
 
   constructor() {
     this.seed();
@@ -63,6 +67,7 @@ export class MemStorage implements IStorage {
       schoolCode: "ST001",
       role: "student",
       merits: 0,
+      trashPoints: 0,
       stamps: 0,
     };
     this.users.set(user1Id, user1);
@@ -76,7 +81,8 @@ export class MemStorage implements IStorage {
       schoolCode: "ST001",
       role: "student",
       merits: 3,
-      stamps: 2,
+      trashPoints: 2,
+      stamps: 0,
     };
     this.users.set(user2Id, user2);
 
@@ -89,7 +95,8 @@ export class MemStorage implements IStorage {
       schoolCode: "ST001",
       role: "student",
       merits: 7,
-      stamps: 5,
+      trashPoints: 5,
+      stamps: 1,
     };
     this.users.set(user3Id, user3);
 
@@ -153,6 +160,7 @@ export class MemStorage implements IStorage {
       schoolCode: insertUser.schoolCode ?? null,
       role: isAdmin ? "admin" : "student",
       merits: 0,
+      trashPoints: 0,
       stamps: 0,
     };
     this.users.set(id, user);
@@ -166,7 +174,31 @@ export class MemStorage implements IStorage {
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {
     const user = this.users.get(id);
     if (!user) return undefined;
-    const updated = { ...user, merits: user.merits + amount };
+    const newMerits = user.merits + amount;
+    const oldStampsFromMerits = Math.floor(user.merits / 10);
+    const newStampsFromMerits = Math.floor(newMerits / 10);
+    const stampGain = newStampsFromMerits - oldStampsFromMerits;
+    const updated = {
+      ...user,
+      merits: newMerits,
+      stamps: user.stamps + stampGain,
+    };
+    this.users.set(id, updated);
+    return updated;
+  }
+
+  async updateUserTrashPoints(id: string, amount: number): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    const newTrash = user.trashPoints + amount;
+    const oldStampsFromTrash = Math.floor(user.trashPoints / 10);
+    const newStampsFromTrash = Math.floor(newTrash / 10);
+    const stampGain = newStampsFromTrash - oldStampsFromTrash;
+    const updated = {
+      ...user,
+      trashPoints: newTrash,
+      stamps: user.stamps + stampGain,
+    };
     this.users.set(id, updated);
     return updated;
   }
@@ -204,15 +236,40 @@ export class MemStorage implements IStorage {
     return this.announcements.delete(id);
   }
 
-  createQrToken(type: "checkin" | "stamp"): QrToken {
-    const token = `st-${type}-${randomUUID().slice(0, 8)}`;
-    const qr: QrToken = { token, type, createdAt: new Date(), usedBy: new Set() };
+  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): QrToken {
+    if (type === "checkin") {
+      if (this.permanentCheckinToken) {
+        const existing = this.qrTokens.get(this.permanentCheckinToken);
+        if (existing) return existing;
+      }
+      const token = `st-checkin-${randomUUID().slice(0, 8)}`;
+      const qr: QrToken = { token, type, createdAt: new Date(), expiresAt: null, usedBy: new Set() };
+      this.qrTokens.set(token, qr);
+      this.permanentCheckinToken = token;
+      return qr;
+    }
+
+    const token = `st-stamp-${randomUUID().slice(0, 8)}`;
+    const mins = expiryMinutes ?? 5;
+    const expiresAt = new Date(Date.now() + mins * 60 * 1000);
+    const qr: QrToken = { token, type, createdAt: new Date(), expiresAt, usedBy: new Set() };
     this.qrTokens.set(token, qr);
     return qr;
   }
 
   getQrToken(token: string): QrToken | undefined {
-    return this.qrTokens.get(token);
+    const qr = this.qrTokens.get(token);
+    if (!qr) return undefined;
+    if (qr.expiresAt && new Date() > qr.expiresAt) {
+      this.qrTokens.delete(token);
+      return undefined;
+    }
+    return qr;
+  }
+
+  getCheckinQr(): QrToken | undefined {
+    if (!this.permanentCheckinToken) return undefined;
+    return this.qrTokens.get(this.permanentCheckinToken);
   }
 
   markQrUsed(token: string, userId: string): boolean {

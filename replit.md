@@ -15,16 +15,20 @@ A Thai school student digital system for managing goodness activities, stamp col
 3. **Activities Page** - Two tabs:
    - ความดี (Goodness): Check-in via QR, activity submission form
    - ธนาคารขยะ (Trash Bank): Stamp card (10 stamps), rewards catalog
-4. **QR Code System** - Generate QR codes (html5-qrcode, qrcode.react), scan to earn merits/stamps, one-time-use per user
+4. **QR Code System** (Admin only):
+   - **QR เช็คชื่อ (Checkin)**: Permanent QR, works 06:00-08:00 only, one scan per student per day, +1 merit point
+   - **QR ธนาคารขยะ (Stamp)**: Single-use QR, expires in 1/2/5 minutes, +1 trash point
+   - **Stamp conversion**: Every 10 points (merit or trash) = 1 stamp (auto-calculated)
 5. **Announcements** - List of school announcements (expandable cards)
 6. **Report/Complaint** - Form with category select, details textarea, image link
-7. **Profile** - Avatar, stats, settings links, logout
+7. **Profile** - Avatar, 3 stats (merits, trashPoints, stamps), settings links, logout
 8. **Admin Panel** - Role-based admin system with:
-   - Dashboard: Overview stats (students, pending activities, reports, announcements, total merits/stamps)
-   - Manage Students: Search, view, delete students
+   - Dashboard: Overview stats, logout button
+   - Manage Students: Search, view, delete students (shows merits, trashPoints, stamps)
    - Approve Activities: Filter by status, approve/reject activities
    - Manage Announcements: Create, view, delete announcements
-   - Manage Reports: Filter by status, update status (pending → in_progress → resolved/rejected)
+   - Manage Reports: Filter by status, update status
+   - QR Code Generator: Create checkin (permanent) and stamp (timed) QR codes
 
 ## Routes
 
@@ -35,7 +39,6 @@ A Thai school student digital system for managing goodness activities, stamp col
 - `/announcements` - Announcements page (protected)
 - `/report` - Report/complaint page (protected)
 - `/profile` - Profile page (protected)
-- `/qr-generator` - QR Code generator (protected)
 
 ### Admin Routes
 - `/admin` - Admin dashboard (admin only)
@@ -43,6 +46,7 @@ A Thai school student digital system for managing goodness activities, stamp col
 - `/admin/activities` - Approve activities (admin only)
 - `/admin/announcements` - Manage announcements (admin only)
 - `/admin/reports` - Manage reports (admin only)
+- `/admin/qr` - QR Code generator (admin only)
 
 ## API Endpoints
 
@@ -56,23 +60,30 @@ A Thai school student digital system for managing goodness activities, stamp col
 - `POST /api/announcements` - Create announcement
 - `DELETE /api/announcements/:id` - Delete announcement
 - `GET /api/activities/:userId` - Get user activities
-- `POST /api/activities/:userId` - Create activity (auto-awards merits/stamps)
+- `POST /api/activities/:userId` - Create activity (auto-awards merits/trashPoints)
 - `GET /api/reports/:userId` - Get user reports
 - `POST /api/reports/:userId` - Create report
-- `POST /api/qr/generate` - Generate QR token {type: "checkin"|"stamp"}
-- `POST /api/qr/scan` - Scan QR token {token, userId}
+- `POST /api/qr/scan` - Scan QR token {token, userId} — enforces time (6-8AM for checkin), daily limit, single-use (stamp)
 
-### Admin APIs
+### Admin APIs (protected by requireAdmin middleware)
 - `GET /api/admin/stats` - Dashboard statistics
 - `GET /api/admin/users` - List all users
 - `DELETE /api/admin/users/:id` - Delete user
 - `GET /api/admin/activities` - List all activities
-- `PATCH /api/admin/activities/:id` - Update activity status {status: "approved"|"rejected"}
+- `PATCH /api/admin/activities/:id` - Update activity status
 - `GET /api/admin/reports` - List all reports
-- `PATCH /api/admin/reports/:id` - Update report status {status: "in_progress"|"resolved"|"rejected"}
+- `PATCH /api/admin/reports/:id` - Update report status
+- `POST /api/qr/generate` - Generate QR token {type, expiryMinutes}
+- `GET /api/qr/checkin` - Get existing permanent checkin QR
+
+## Data Model
+- **User**: id, studentId, name, password, schoolCode, role, merits, trashPoints, stamps
+- **QrToken**: token, type (checkin|stamp), createdAt, expiresAt (null=permanent), usedBy (Set)
+- Checkin QR uses daily keys (userId_date) for per-day tracking
+- Stamp QR tracks individual userId, limited to 1 use total
 
 ## Seed Data
-- Admin: ลงทะเบียนใหม่แล้วกรอกรหัสสภานักเรียน "สภานักเรียนปี2569/1_2" จะได้ role admin อัตโนมัติ
+- Admin: Register with schoolCode "สภานักเรียนปี2569/1_2" → auto admin role
 - Student 1: studentId="19823", password="1234", name="Kittipot Ice"
 - Student 2: studentId="12345", password="1234", name="สมชาย ใจดี"
 - Student 3: studentId="11111", password="1234", name="สมหญิง รักเรียน"
@@ -84,6 +95,7 @@ A Thai school student digital system for managing goodness activities, stamp col
 - Primary: Blue gradient (#4F8EF7 to #2563EB)
 - Font: Sarabun (Thai) + Inter
 - Bottom tab navigation (5 tabs for students, 5 tabs for admin)
+- Admin can use both student and admin pages
 
 ## Key Packages
 - html5-qrcode, qrcode.react (QR system)

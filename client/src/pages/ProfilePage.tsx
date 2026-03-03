@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
-import { LogOut, User, Settings, Award, Recycle, ChevronRight } from "lucide-react";
+import { LogOut, User, Settings, Award, Recycle, ChevronRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,22 +40,30 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-100" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-        <div className="grid grid-cols-2 divide-x divide-gray-100">
-          <div className="flex flex-col items-center gap-2 pr-4">
-            <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center">
-              <Award size={20} className="text-yellow-500" />
+        <div className="grid grid-cols-3 divide-x divide-gray-100">
+          <div className="flex flex-col items-center gap-1.5 px-2">
+            <div className="w-9 h-9 rounded-full bg-yellow-50 flex items-center justify-center">
+              <Award size={18} className="text-yellow-500" />
             </div>
-            <p className="text-2xl font-bold text-gray-800" data-testid="text-profile-merits">{user.merits}</p>
-            <p className="text-xs text-gray-500">แต้มความดี</p>
+            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-merits">{user.merits}</p>
+            <p className="text-[10px] text-gray-500">แต้มความดี</p>
           </div>
-          <div className="flex flex-col items-center gap-2 pl-4">
-            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-              <Recycle size={20} className="text-green-500" />
+          <div className="flex flex-col items-center gap-1.5 px-2">
+            <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
+              <Recycle size={18} className="text-green-500" />
             </div>
-            <p className="text-2xl font-bold text-gray-800" data-testid="text-profile-stamps">{user.stamps}</p>
-            <p className="text-xs text-gray-500">แสตมป์ขยะ</p>
+            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-trash">{user.trashPoints}</p>
+            <p className="text-[10px] text-gray-500">แต้มขยะ</p>
+          </div>
+          <div className="flex flex-col items-center gap-1.5 px-2">
+            <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
+              <Star size={18} className="text-purple-500" />
+            </div>
+            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-stamps">{user.stamps}</p>
+            <p className="text-[10px] text-gray-500">แสตมป์</p>
           </div>
         </div>
+        <p className="text-[10px] text-center text-gray-400 mt-3">ทุก 10 แต้ม = 1 แสตมป์</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 mb-4 divide-y divide-gray-50" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>

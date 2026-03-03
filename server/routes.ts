@@ -72,12 +72,23 @@ export async function registerRoutes(
   });
 
   app.post("/api/qr/generate", requireAdmin, async (req, res) => {
-    const { type } = req.body;
+    const { type, expiryMinutes } = req.body;
     if (type !== "checkin" && type !== "stamp") {
       return res.status(400).json({ message: "ประเภท QR ไม่ถูกต้อง" });
     }
-    const qr = storage.createQrToken(type);
-    res.json({ token: qr.token, type: qr.type });
+    const qr = storage.createQrToken(type, type === "stamp" ? (expiryMinutes ?? 5) : null);
+    res.json({
+      token: qr.token,
+      type: qr.type,
+      expiresAt: qr.expiresAt?.toISOString() ?? null,
+      permanent: qr.expiresAt === null,
+    });
+  });
+
+  app.get("/api/qr/checkin", requireAdmin, async (_req, res) => {
+    const qr = storage.getCheckinQr();
+    if (!qr) return res.json({ exists: false });
+    res.json({ exists: true, token: qr.token, usedCount: qr.usedBy.size });
   });
 
   app.post("/api/qr/scan", async (req, res) => {
@@ -89,28 +100,62 @@ export async function registerRoutes(
     if (!qr) {
       return res.status(404).json({ message: "QR Code ไม่ถูกต้องหรือหมดอายุ" });
     }
+
+    if (qr.type === "checkin") {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour < 6 || hour >= 8) {
+        return res.status(403).json({ message: "QR เช็คชื่อใช้ได้เฉพาะเวลา 06:00 - 08:00 น. เท่านั้น" });
+      }
+      const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      const dailyKey = `${userId}_${today}`;
+      if (qr.usedBy.has(dailyKey)) {
+        return res.status(409).json({ message: "คุณได้เช็คชื่อวันนี้ไปแล้ว" });
+      }
+    }
+
+    if (qr.type === "stamp" && qr.usedBy.size > 0) {
+      return res.status(409).json({ message: "QR Code นี้ถูกใช้งานแล้ว กรุณาขอ QR Code ใหม่จากสภานักเรียน" });
+    }
+
     const user = await storage.getUser(userId);
     if (!user) {
       return res.status(404).json({ message: "ไม่พบผู้ใช้" });
     }
-    const success = storage.markQrUsed(token, userId);
-    if (!success) {
-      return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
-    }
-    const desc = qr.type === "checkin" ? "เช็คชื่อผ่าน QR Code" : "รับแสตมป์ขยะผ่าน QR Code";
-    await storage.createActivity(userId, { type: qr.type, description: desc });
+
     if (qr.type === "checkin") {
-      await storage.updateUserMerits(userId, 1);
+      const now = new Date();
+      const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      const dailyKey = `${userId}_${today}`;
+      storage.markQrUsed(token, dailyKey);
     } else {
-      await storage.updateUserStamps(userId, 1);
+      const success = storage.markQrUsed(token, userId);
+      if (!success) {
+        return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
+      }
     }
-    const updatedUser = await storage.getUser(userId);
-    const { password: _, ...safeUser } = updatedUser!;
-    res.json({
-      message: qr.type === "checkin" ? "เช็คชื่อสำเร็จ! ได้รับ 1 แต้มความดี" : "รับแสตมป์สำเร็จ! ได้รับ 1 แสตมป์ขยะ",
-      user: safeUser,
-      type: qr.type,
-    });
+
+    if (qr.type === "checkin") {
+      await storage.createActivity(userId, { type: "checkin", description: "เช็คชื่อผ่าน QR Code (+1 แต้มความดี)" });
+      const updated = await storage.updateUserMerits(userId, 1);
+      const { password: _, ...safeUser } = updated!;
+      const stampMsg = updated!.merits % 10 === 0 ? " 🎉 ครบ 10 แต้ม ได้รับ 1 แสตมป์!" : "";
+      res.json({
+        message: `เช็คชื่อสำเร็จ! ได้รับ 1 แต้มความดี (รวม ${updated!.merits} แต้ม)${stampMsg}`,
+        user: safeUser,
+        type: "checkin",
+      });
+    } else {
+      await storage.createActivity(userId, { type: "stamp", description: "รับแต้มขยะผ่าน QR Code (+1 แต้มขยะ)" });
+      const updated = await storage.updateUserTrashPoints(userId, 1);
+      const { password: _, ...safeUser } = updated!;
+      const stampMsg = updated!.trashPoints % 10 === 0 ? " 🎉 ครบ 10 แต้ม ได้รับ 1 แสตมป์!" : "";
+      res.json({
+        message: `รับแต้มขยะสำเร็จ! ได้รับ 1 แต้มขยะ (รวม ${updated!.trashPoints} แต้ม)${stampMsg}`,
+        user: safeUser,
+        type: "stamp",
+      });
+    }
   });
 
   app.get("/api/activities/:userId", async (req, res) => {
@@ -129,7 +174,7 @@ export async function registerRoutes(
     if (result.data.type === "goodness" || result.data.type === "checkin") {
       await storage.updateUserMerits(req.params.userId, 1);
     } else if (result.data.type === "stamp") {
-      await storage.updateUserStamps(req.params.userId, 1);
+      await storage.updateUserTrashPoints(req.params.userId, 1);
     }
     const updatedUser = await storage.getUser(req.params.userId);
     const { password: _, ...safeUser } = updatedUser!;

@@ -14,6 +14,7 @@ interface SafeUser {
   name: string;
   role: string;
   merits: number;
+  trashPoints: number;
   stamps: number;
 }
 
@@ -89,11 +90,14 @@ export default function AdminUsers() {
                 <p className="font-semibold text-gray-800 text-sm truncate">{u.name}</p>
                 <p className="text-xs text-gray-400">รหัส: {u.studentId}</p>
                 <div className="flex items-center gap-3 mt-1">
-                  <span className="flex items-center gap-1 text-xs text-yellow-600">
+                  <span className="flex items-center gap-1 text-xs text-yellow-600" title="แต้มความดี">
                     <Award size={12} /> {u.merits}
                   </span>
-                  <span className="flex items-center gap-1 text-xs text-green-600">
-                    <Recycle size={12} /> {u.stamps}
+                  <span className="flex items-center gap-1 text-xs text-green-600" title="แต้มขยะ">
+                    <Recycle size={12} /> {u.trashPoints}
+                  </span>
+                  <span className="text-xs text-purple-500 font-semibold" title="แสตมป์">
+                    ★{u.stamps}
                   </span>
                 </div>
               </div>

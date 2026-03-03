@@ -132,8 +132,8 @@ function StampTab() {
   const queryClient = useQueryClient();
   const [showScanner, setShowScanner] = useState(false);
 
-  const stampsCount = user?.stamps ?? 0;
-  const displayStamps = stampsCount % MAX_STAMPS;
+  const trashPts = user?.trashPoints ?? 0;
+  const displayStamps = trashPts % MAX_STAMPS;
 
   const scanMutation = useMutation({
     mutationFn: (token: string) => apiRequest("POST", "/api/qr/scan", { token, userId: user!.id }),
@@ -165,7 +165,7 @@ function StampTab() {
           <h3 className="font-bold text-gray-800 text-sm">บัตรสะสมแสตมป์</h3>
           <span className="text-green-500 font-bold text-sm">{displayStamps}<span className="text-gray-400 font-normal">/{MAX_STAMPS}</span></span>
         </div>
-        <p className="text-xs text-gray-500 mb-4">สะสมครบ 10 ดวง แลกรับของรางวัล</p>
+        <p className="text-xs text-gray-500 mb-4">สะสมครบ 10 แต้มขยะ = 1 แสตมป์ (มี {user?.stamps ?? 0} แสตมป์แล้ว)</p>
         <div className="h-1.5 bg-gray-100 rounded-full mb-4">
           <div
             className="h-full rounded-full transition-all duration-500"
