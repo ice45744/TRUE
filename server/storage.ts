@@ -5,6 +5,26 @@ import {
   type Report, type InsertReport,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  try {
+    // In a real app, you'd use a service account from env secrets
+    // For now, we'll use a placeholder or check if env exists
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      initializeApp({
+        credential: cert(serviceAccount)
+      });
+    }
+  } catch (e) {
+    console.error("Firebase Admin Init Error:", e);
+  }
+}
+
+const db = getApps().length ? getFirestore() : null;
 
 export interface QrToken {
   token: string;
@@ -176,6 +196,19 @@ export class MemStorage implements IStorage {
     if (!user) return undefined;
     const updated = { ...user, merits: user.merits + amount };
     this.users.set(id, updated);
+
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("users").doc(id).update({
+          merits: updated.merits,
+          lastUpdated: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Firebase Sync Merits Error:", e);
+      }
+    }
+
     return updated;
   }
 
@@ -192,6 +225,20 @@ export class MemStorage implements IStorage {
       stamps: user.stamps + stampGain,
     };
     this.users.set(id, updated);
+
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("users").doc(id).update({
+          trashPoints: updated.trashPoints,
+          stamps: updated.stamps,
+          lastUpdated: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Firebase Sync TrashPoints Error:", e);
+      }
+    }
+
     return updated;
   }
 
@@ -294,6 +341,28 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.activities.set(act.id, act);
+
+    // Sync to Firebase if available
+    if (db) {
+      try {
+        await db.collection("activities").doc(act.id).set({
+          ...act,
+          createdAt: act.createdAt.toISOString()
+        });
+        
+        // Update user merits/trash in Firebase too
+        const user = await this.getUser(userId);
+        if (user) {
+          await db.collection("users").doc(userId).set({
+            ...user,
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+        }
+      } catch (e) {
+        console.error("Firebase Sync Error:", e);
+      }
+    }
+
     return act;
   }
 
