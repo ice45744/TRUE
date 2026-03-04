@@ -89,6 +89,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminActivities from "@/pages/admin/AdminActivities";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminReports from "@/pages/admin/AdminReports";
+import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
