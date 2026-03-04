@@ -25,20 +25,42 @@ export default function ReportPage() {
   const [category, setCategory] = useState("");
   const [details, setDetails] = useState("");
   const [imageLink, setImageLink] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=baf409d03cf4975986f6d44b5a1a2919`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.success) {
+      return data.data.url;
+    }
+    throw new Error("อัปโหลดรูปภาพไม่สำเร็จ");
+  };
+
   const mutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/reports/${user!.id}`, {
-      category,
-      details,
-      imageLink: imageLink || undefined,
-    }),
+    mutationFn: async () => {
+      let finalImageUrl = imageLink;
+      if (selectedFile) {
+        finalImageUrl = await uploadImage(selectedFile);
+      }
+      return apiRequest("POST", `/api/reports/${user!.id}`, {
+        category,
+        details,
+        imageLink: finalImageUrl || undefined,
+      });
+    },
     onSuccess: async (res) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       setCategory("");
       setDetails("");
       setImageLink("");
+      setSelectedFile(null);
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 4000);
       toast({ title: "ส่งเรื่องร้องเรียนสำเร็จ!", description: "สภานักเรียนจะตรวจสอบและดำเนินการโดยเร็ว" });
@@ -127,9 +149,11 @@ export default function ReportPage() {
               <Camera size={14} className="text-gray-400" />
               <Label className="text-gray-700 text-sm font-semibold">อัปโหลดรูปภาพประกอบ (ImgBB)</Label>
             </div>
-            <div className="bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-400 cursor-pointer hover:bg-gray-100 transition-colors">
-              เลือกไฟล์  ไม่ได้เลือกไฟลใด
-            </div>
+            <Input
+              type="file"
+              accept="image/*"
+              className="rounded-xl bg-gray-50 border-gray-200 text-sm h-11 transition-all duration-200 focus:bg-white"
+              onChange={e => setSelectedFile(e.target.files?.[0] || null)} />
           </div>
 
           <div>

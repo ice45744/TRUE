@@ -25,6 +25,7 @@ function GoodnesTab() {
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("");
   const [imageLink, setImageLink] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
 
@@ -44,12 +45,32 @@ function GoodnesTab() {
     },
   });
 
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=baf409d03cf4975986f6d44b5a1a2919`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.success) {
+      return data.data.url;
+    }
+    throw new Error("อัปโหลดรูปภาพไม่สำเร็จ");
+  };
+
   const activityMutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/activities/${user!.id}`, {
-      type: "goodness",
-      description,
-      imageUrl: imageLink || undefined,
-    }),
+    mutationFn: async () => {
+      let finalImageUrl = imageLink;
+      if (selectedFile) {
+        finalImageUrl = await uploadImage(selectedFile);
+      }
+      return apiRequest("POST", `/api/activities/${user!.id}`, {
+        type: "goodness",
+        description,
+        imageUrl: finalImageUrl || undefined,
+      });
+    },
     onSuccess: async (res) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
@@ -57,6 +78,7 @@ function GoodnesTab() {
       queryClient.invalidateQueries({ queryKey: ["/api/activities", user!.id] });
       setDescription("");
       setImageLink("");
+      setSelectedFile(null);
       toast({ title: "บันทึกสำเร็จ!", description: "กิจกรรมของคุณถูกส่งเพื่อรอการอนุมัติ" });
     },
     onError: (err: any) => {
@@ -125,6 +147,12 @@ function GoodnesTab() {
               onChange={e => setDescription(e.target.value)} />
           </div>
           <div>
+            <Label className="text-gray-600 text-xs font-medium mb-1.5 block">อัปโหลดรูปภาพประกอบ (ImgBB)</Label>
+            <Input
+              type="file"
+              accept="image/*"
+              className="rounded-xl bg-gray-50 border-gray-200 text-sm h-10 transition-all duration-200 focus:bg-white mb-2"
+              onChange={e => setSelectedFile(e.target.files?.[0] || null)} />
             <Label className="text-gray-600 text-xs font-medium mb-1.5 block">หรือวางลิงก์รูปภาพประกอบ</Label>
             <Input
               data-testid="input-activity-imagelink"
