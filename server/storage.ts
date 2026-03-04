@@ -3,6 +3,7 @@ import {
   type Announcement, type InsertAnnouncement,
   type Activity, type InsertActivity,
   type Report, type InsertReport,
+  type SystemSettings, type InsertSystemSettings,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { initializeApp, cert, getApps } from "firebase-admin/app";

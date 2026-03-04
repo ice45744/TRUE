@@ -77,7 +77,6 @@ function MaintenanceOverlay() {
   );
 }
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
 import AuthPage from "@/pages/AuthPage";
 import HomePage from "@/pages/HomePage";
 import ActivitiesPage from "@/pages/ActivitiesPage";
