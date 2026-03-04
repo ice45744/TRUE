@@ -63,6 +63,9 @@ export interface IStorage {
   getAllReports(): Promise<Report[]>;
   createReport(userId: string, r: InsertReport): Promise<Report>;
   updateReportStatus(id: string, status: string): Promise<Report | undefined>;
+
+  getSystemSettings(): Promise<SystemSettings>;
+  updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings>;
 }
 
 export class MemStorage implements IStorage {
@@ -71,6 +74,12 @@ export class MemStorage implements IStorage {
   private activities: Map<string, Activity> = new Map();
   private reports: Map<string, Report> = new Map();
   private qrTokens: Map<string, QrToken> = new Map();
+  private systemSettings: SystemSettings = {
+    id: "default",
+    maintenanceMode: 0,
+    maintenanceMessage: "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
+    maintenanceUntil: null,
+  };
   private permanentCheckinToken: string | null = null;
 
   constructor() {
@@ -406,6 +415,18 @@ export class MemStorage implements IStorage {
     const updated = { ...rpt, status };
     this.reports.set(id, updated);
     return updated;
+  }
+
+  async getSystemSettings(): Promise<SystemSettings> {
+    return this.systemSettings;
+  }
+
+  async updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings> {
+    this.systemSettings = {
+      ...this.systemSettings,
+      ...settings,
+    };
+    return this.systemSettings;
   }
 }
 

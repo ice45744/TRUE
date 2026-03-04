@@ -4,8 +4,80 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck } from "lucide-react";
-import NotFound from "@/pages/not-found";
+import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { SystemSettings } from "@shared/schema";
+import { useState, useEffect } from "react";
+
+function MaintenanceOverlay() {
+  const { isAdmin } = useAuth();
+  const { data: settings } = useQuery<SystemSettings>({
+    queryKey: ["/api/system/settings"],
+    refetchInterval: 10000,
+  });
+
+  const [timeLeft, setTimeLeft] = useState<string>("");
+
+  useEffect(() => {
+    if (!settings?.maintenanceUntil) return;
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const target = new Date(settings.maintenanceUntil!).getTime();
+      const distance = target - now;
+
+      if (distance < 0) {
+        setTimeLeft("");
+        clearInterval(timer);
+        return;
+      }
+
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [settings?.maintenanceUntil]);
+
+  if (!settings || settings.maintenanceMode === 0 || isAdmin) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+      <div className="w-24 h-24 mb-6 rounded-full bg-red-50 flex items-center justify-center animate-pulse">
+        <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center">
+          <Settings className="text-white w-8 h-8 animate-spin-slow" />
+        </div>
+      </div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">ปิดปรับปรุงเซิร์ฟเวอร์</h1>
+      <p className="text-gray-600 mb-8 max-w-xs mx-auto leading-relaxed">
+        {settings.maintenanceMessage}
+      </p>
+
+      {timeLeft && (
+        <div className="flex flex-col items-center gap-2 mb-8 bg-gray-50 p-6 rounded-3xl w-full max-w-[200px]">
+          <Clock className="text-blue-600 w-5 h-5" />
+          <span className="text-3xl font-mono font-bold text-gray-900 tracking-wider">
+            {timeLeft}
+          </span>
+          <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">Estimated Time Left</span>
+        </div>
+      )}
+
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:-0.3s]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:-0.15s]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
 import AuthPage from "@/pages/AuthPage";
 import HomePage from "@/pages/HomePage";
 import ActivitiesPage from "@/pages/ActivitiesPage";
@@ -161,6 +233,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
+          <MaintenanceOverlay />
           <AppShell />
           <Toaster />
         </AuthProvider>

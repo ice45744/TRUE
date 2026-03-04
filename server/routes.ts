@@ -249,6 +249,16 @@ export async function registerRoutes(
     res.json(rpt);
   });
 
+  app.get("/api/system/settings", async (_req, res) => {
+    const settings = await storage.getSystemSettings();
+    res.json(settings);
+  });
+
+  app.patch("/api/system/settings", requireAdmin, async (req, res) => {
+    const settings = await storage.updateSystemSettings(req.body);
+    res.json(settings);
+  });
+
   app.get("/api/admin/stats", requireAdmin, async (_req, res) => {
     const users = await storage.getAllUsers();
     const acts = await storage.getAllActivities();

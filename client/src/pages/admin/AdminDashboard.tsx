@@ -1,8 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Recycle, Clock, ChevronRight, LayoutDashboard, LogOut, QrCode, Star } from "lucide-react";
+import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Recycle, Clock, ChevronRight, LayoutDashboard, LogOut, QrCode, Star, Settings, Power } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { SystemSettings } from "@shared/schema";
+import { useState } from "react";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Stats {
   totalStudents: number;
@@ -28,6 +36,30 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/stats"],
   });
   const { user, logout } = useAuth();
+  const { toast } = useToast();
+  const [mUntil, setMUntil] = useState("");
+
+  const { data: settings } = useQuery<SystemSettings>({
+    queryKey: ["/api/system/settings"],
+  });
+
+  const updateSettings = useMutation({
+    mutationFn: async (vars: Partial<SystemSettings>) => {
+      const res = await apiRequest("PATCH", "/api/system/settings", vars);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/system/settings"] });
+      toast({ title: "อัปเดตการตั้งค่าสำเร็จ" });
+    },
+  });
+
+  const toggleMaintenance = (checked: boolean) => {
+    updateSettings.mutate({ 
+      maintenanceMode: checked ? 1 : 0,
+      maintenanceUntil: checked && mUntil ? new Date(mUntil).toISOString() : null
+    });
+  };
 
   return (
     <div className="pb-24 pt-5 px-4">
@@ -77,6 +109,61 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Maintenance Section */}
+      <div className="bg-white rounded-2xl p-5 border border-gray-100 mb-5 animate-fade-in-up stagger-2" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100">
+              <Settings className="text-orange-600 w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 text-sm">โหมดปิดปรับปรุง</h3>
+              <p className="text-[10px] text-gray-400">จัดการการเข้าถึงเว็บไซต์</p>
+            </div>
+          </div>
+          <Switch 
+            checked={settings?.maintenanceMode === 1}
+            onCheckedChange={toggleMaintenance}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+              ข้อความแจ้งเตือน
+            </label>
+            <Input 
+              value={settings?.maintenanceMessage || ""}
+              onChange={(e) => updateSettings.mutate({ maintenanceMessage: e.target.value })}
+              placeholder="กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง"
+              className="bg-gray-50 border-none rounded-xl text-sm h-9"
+            />
+          </div>
+          <div>
+            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+              เวลาที่คาดว่าจะเสร็จ (เลือกได้)
+            </label>
+            <div className="flex gap-2">
+              <Input 
+                type="datetime-local"
+                value={mUntil}
+                onChange={(e) => setMUntil(e.target.value)}
+                className="bg-gray-50 border-none rounded-xl text-sm h-9 flex-1"
+              />
+              <Button 
+                size="sm"
+                onClick={() => updateSettings.mutate({ 
+                  maintenanceUntil: mUntil ? new Date(mUntil).toISOString() : null 
+                })}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 h-9 text-xs px-4"
+              >
+                ตั้งเวลา
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 mb-5 divide-y divide-gray-50 animate-fade-in-up stagger-3" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
         <div className="px-4 py-3">
