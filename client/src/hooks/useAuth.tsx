@@ -1,5 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiRequest } from "@/lib/queryClient";
+import { auth, db } from "@/lib/firebase";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  updateProfile
+} from "firebase/auth";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 interface AuthUser {
   id: string;
@@ -24,48 +33,77 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const STORAGE_KEY = "st_kaona_user";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser(userDoc.data() as AuthUser);
+          } else {
+            // Fallback or handle missing profile
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (studentId: string, password: string) => {
-    const res = await apiRequest("POST", "/api/auth/login", { studentId, password });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "เข้าสู่ระบบไม่สำเร็จ");
-    setUser(data.user);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
+    // Firebase uses email, so we've mapped studentId to a pseudo-email
+    const email = `${studentId}@school.com`;
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+    if (userDoc.exists()) {
+      setUser(userDoc.data() as AuthUser);
+    }
   };
 
   const register = async (formData: { studentId: string; name: string; password: string; schoolCode?: string }) => {
-    const res = await apiRequest("POST", "/api/auth/register", formData);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "ลงทะเบียนไม่สำเร็จ");
-    setUser(data.user);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
+    const email = `${formData.studentId}@school.com`;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, formData.password);
+    
+    const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
+    const isAdmin = formData.schoolCode === ADMIN_CODE;
+    
+    const newUser: AuthUser = {
+      id: userCredential.user.uid,
+      studentId: formData.studentId,
+      name: formData.name,
+      schoolCode: formData.schoolCode ?? null,
+      role: isAdmin ? "admin" : "student",
+      merits: 0,
+      trashPoints: 0,
+      stamps: 0,
+    };
+
+    await setDoc(doc(db, "users", userCredential.user.uid), newUser);
+    await updateProfile(userCredential.user, { displayName: formData.name });
+    setUser(newUser);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
   };
 
-  const updateUser = (updated: AuthUser) => {
-    setUser(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  const updateUser = async (updated: AuthUser) => {
+    if (user) {
+      await updateDoc(doc(db, "users", user.id), { ...updated });
+      setUser(updated);
+    }
   };
 
   const isAdmin = user?.role === "admin";
