@@ -80,6 +80,8 @@ export type Announcement = typeof announcements.$inferSelect;
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;
 export const systemSettings = pgTable("system_settings", {
   id: varchar("id", { length: 36 }).primaryKey(),
   maintenanceMode: integer("maintenance_mode").notNull().default(0), // 0: off, 1: on

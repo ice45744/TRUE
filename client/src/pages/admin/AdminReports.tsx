@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Report } from "@shared/schema";
+import { type Report } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
 import { useState } from "react";

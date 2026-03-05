@@ -57,7 +57,7 @@ export default function AdminDashboard() {
   const toggleMaintenance = (checked: boolean) => {
     updateSettings.mutate({ 
       maintenanceMode: checked ? 1 : 0,
-      maintenanceUntil: checked && mUntil ? new Date(mUntil).toISOString() : null
+      maintenanceUntil: checked && mUntil ? new Date(mUntil) : null
     });
   };
 
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
               <Button 
                 size="sm"
                 onClick={() => updateSettings.mutate({ 
-                  maintenanceUntil: mUntil ? new Date(mUntil).toISOString() : null 
+                  maintenanceUntil: mUntil ? new Date(mUntil) : null 
                 })}
                 className="rounded-xl bg-indigo-600 hover:bg-indigo-700 h-9 text-xs px-4"
               >
