@@ -17,6 +17,7 @@ export function serveStatic(app: Express) {
     if (req.path.startsWith("/api") || req.path.includes(".")) {
       return next();
     }
+    console.log(`[static] Serving index.html for ${req.path}`);
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
