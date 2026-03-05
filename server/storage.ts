@@ -16,9 +16,14 @@ if (!getApps().length) {
     // For now, we'll use a placeholder or check if env exists
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      initializeApp({
-        credential: cert(serviceAccount)
-      });
+      if (serviceAccount.project_id && serviceAccount.private_key) {
+        initializeApp({
+          credential: cert(serviceAccount)
+        });
+        console.log("Firebase Admin Initialized successfully");
+      } else {
+        console.warn("Firebase Service Account exists but is missing required fields (project_id or private_key)");
+      }
     }
   } catch (e) {
     console.error("Firebase Admin Init Error:", e);
