@@ -423,10 +423,17 @@ export class MemStorage implements IStorage {
   }
 
   async updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings> {
-    this.systemSettings = {
+    const updatedSettings = {
       ...this.systemSettings,
       ...settings,
     };
+    
+    // Convert string date from client back to Date object if needed
+    if (typeof updatedSettings.maintenanceUntil === 'string') {
+      updatedSettings.maintenanceUntil = new Date(updatedSettings.maintenanceUntil);
+    }
+    
+    this.systemSettings = updatedSettings;
     return this.systemSettings;
   }
 }

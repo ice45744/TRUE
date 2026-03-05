@@ -57,7 +57,7 @@ export default function AdminDashboard() {
   const toggleMaintenance = (checked: boolean) => {
     updateSettings.mutate({ 
       maintenanceMode: checked ? 1 : 0,
-      maintenanceUntil: checked && mUntil ? new Date(mUntil) : null
+      maintenanceUntil: checked && mUntil ? new Date(mUntil).toISOString() : null
     });
   };
 
