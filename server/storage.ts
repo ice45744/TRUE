@@ -4,7 +4,7 @@ import {
   type Activity, type InsertActivity,
   type Report, type InsertReport,
   type SystemSettings, type InsertSystemSettings,
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { randomUUID } from "crypto";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
