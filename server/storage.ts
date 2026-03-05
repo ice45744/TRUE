@@ -452,8 +452,11 @@ export class MemStorage implements IStorage {
       try {
         const doc = await db.collection("settings").doc("system").get();
         if (doc.exists) {
-          const data = doc.data() as SystemSettings;
-          this.systemSettings = data;
+          const data = doc.data() as any;
+          this.systemSettings = {
+            ...data,
+            maintenanceUntil: data.maintenanceUntil ? new Date(data.maintenanceUntil) : null
+          };
         }
       } catch (e) {
         console.error("Firebase GetSettings Error:", e);
@@ -468,9 +471,9 @@ export class MemStorage implements IStorage {
       ...settings,
     };
     
-    // Convert string date from client back to Date object if needed
-    if (typeof updatedSettings.maintenanceUntil === 'string') {
-      updatedSettings.maintenanceUntil = new Date(updatedSettings.maintenanceUntil);
+    // Ensure maintenanceUntil is a Date object or null
+    if (settings.maintenanceUntil !== undefined) {
+      updatedSettings.maintenanceUntil = settings.maintenanceUntil ? new Date(settings.maintenanceUntil) : null;
     }
     
     this.systemSettings = updatedSettings;
