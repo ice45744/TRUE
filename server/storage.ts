@@ -167,7 +167,23 @@ export class MemStorage implements IStorage {
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const memUser = this.users.get(id);
+    if (memUser) return memUser;
+    
+    // Fallback to Firebase if not in memory (useful after restart)
+    if (db) {
+      try {
+        const doc = await db.collection("users").doc(id).get();
+        if (doc.exists) {
+          const data = doc.data() as User;
+          this.users.set(id, data); // Cache in memory
+          return data;
+        }
+      } catch (e) {
+        console.error("Firebase GetUser Error:", e);
+      }
+    }
+    return undefined;
   }
 
   async getUserByStudentId(studentId: string): Promise<User | undefined> {
@@ -419,6 +435,18 @@ export class MemStorage implements IStorage {
   }
 
   async getSystemSettings(): Promise<SystemSettings> {
+    // If memory has default, try fetching from Firebase
+    if (this.systemSettings.id === "default" && db) {
+      try {
+        const doc = await db.collection("settings").doc("system").get();
+        if (doc.exists) {
+          const data = doc.data() as SystemSettings;
+          this.systemSettings = data;
+        }
+      } catch (e) {
+        console.error("Firebase GetSettings Error:", e);
+      }
+    }
     return this.systemSettings;
   }
 

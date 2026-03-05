@@ -7,7 +7,8 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const userId = req.headers["x-user-id"] as string;
   if (!userId) return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ" });
   const user = await storage.getUser(userId);
-  if (!user || user.role !== "admin") return res.status(403).json({ message: "ไม่มีสิทธิ์เข้าถึง" });
+  if (!user) return res.status(401).json({ message: "ไม่พบผู้ใช้" });
+  if (user.role !== "admin") return res.status(403).json({ message: "ไม่มีสิทธิ์เข้าถึง" });
   next();
 }
 
