@@ -89,7 +89,23 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminActivities from "@/pages/admin/AdminActivities";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminReports from "@/pages/admin/AdminReports";
-import NotFound from "@/pages/not-found";
+
+function NotFound() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
+      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-md w-full text-center">
+        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">404 Page Not Found</h1>
+        <p className="text-gray-600 mb-6">ขออภัย ไม่พบหน้าที่คุณกำลังมองหา</p>
+        <Link href="/">
+          <a className="inline-flex items-center justify-center px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+            กลับหน้าหลัก
+          </a>
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
