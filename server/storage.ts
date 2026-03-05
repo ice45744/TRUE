@@ -12,29 +12,47 @@ import { getFirestore } from "firebase-admin/firestore";
 // Initialize Firebase Admin
 if (!getApps().length) {
   try {
-    // In a real app, you'd use a service account from env secrets
-    // For now, we'll use a placeholder or check if env exists
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-        // Ensure private_key has real newlines and is correctly formatted for the cert() function
-        if (typeof serviceAccount.private_key === 'string') {
-          // If the key was stringified with literal \n, replace them. 
-          // If it already has actual newlines, this won't change anything.
-          serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-        }
+        // In a real app, you'd use a service account from env secrets
+        // For now, we'll use a placeholder or check if env exists
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+          try {
+            let serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+            
+            // Replit secrets might sometimes have escaped quotes if not careful, 
+            // but usually it's a raw string. Let's try to handle basic cleanup.
+            if (serviceAccountStr.startsWith("'") && serviceAccountStr.endsWith("'")) {
+              serviceAccountStr = serviceAccountStr.slice(1, -1);
+            }
+            if (serviceAccountStr.startsWith('"') && serviceAccountStr.endsWith('"')) {
+              serviceAccountStr = serviceAccountStr.slice(1, -1);
+            }
 
-        if (serviceAccount.project_id && serviceAccount.private_key) {
-          initializeApp({
-            credential: cert(serviceAccount)
-          });
-          console.log("Firebase Admin Initialized successfully for project:", serviceAccount.project_id);
+            const serviceAccount = JSON.parse(serviceAccountStr);
+            // Improved private key handling
+            if (typeof serviceAccount.private_key === 'string') {
+              // Handle both literal newlines and escaped \n
+              serviceAccount.private_key = serviceAccount.private_key
+                .replace(/\\n/g, '\n')
+                .replace(/\n/g, '\n'); 
+              
+              // Ensure it has the correct header/footer if they were stripped
+              if (!serviceAccount.private_key.includes("-----BEGIN PRIVATE KEY-----")) {
+                serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${serviceAccount.private_key}\n-----END PRIVATE KEY-----\n`;
+              }
+            }
+
+            if (serviceAccount.project_id && serviceAccount.private_key) {
+              initializeApp({
+                credential: cert(serviceAccount)
+              });
+              console.log("Firebase Admin Initialized successfully for project:", serviceAccount.project_id);
+            }
+          } catch (parseError: any) {
+            // Only log a small part of the error to avoid leaking secrets but enough to debug
+            console.error("Firebase Initialization Error: Failed to parse FIREBASE_SERVICE_ACCOUNT. Ensure it is valid JSON.");
+            console.error("Parse Error Detail:", parseError.message || parseError);
+          }
         }
-      } catch (parseError: any) {
-        // Only log a small part of the error to avoid leaking secrets but enough to debug
-        console.error("Firebase Initialization Error:", parseError.message || parseError);
-      }
-    }
   } catch (e) {
     console.error("Firebase Admin Init Error:", e);
   }
