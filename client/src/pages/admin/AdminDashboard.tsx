@@ -38,10 +38,26 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [mUntil, setMUntil] = useState("");
+  const [mMessage, setMMessage] = useState("");
 
   const { data: settings } = useQuery<SystemSettings>({
     queryKey: ["/api/system/settings"],
   });
+
+  useEffect(() => {
+    if (settings) {
+      setMMessage(settings.maintenanceMessage);
+      if (settings.maintenanceUntil) {
+        try {
+          const date = new Date(settings.maintenanceUntil);
+          const formatted = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+          setMUntil(formatted);
+        } catch (e) {
+          console.error("Invalid date from settings", e);
+        }
+      }
+    }
+  }, [settings]);
 
   const updateSettings = useMutation({
     mutationFn: async (vars: Partial<SystemSettings>) => {
@@ -52,12 +68,27 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/system/settings"] });
       toast({ title: "อัปเดตการตั้งค่าสำเร็จ" });
     },
+    onError: (error: Error) => {
+      toast({ 
+        title: "อัปเดตการตั้งค่าไม่สำเร็จ", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
   });
 
   const toggleMaintenance = (checked: boolean) => {
     updateSettings.mutate({ 
       maintenanceMode: checked ? 1 : 0,
+      maintenanceMessage: mMessage || undefined,
       maintenanceUntil: checked && mUntil ? new Date(mUntil).toISOString() : null
+    });
+  };
+
+  const handleSaveSettings = () => {
+    updateSettings.mutate({
+      maintenanceMessage: mMessage,
+      maintenanceUntil: mUntil ? new Date(mUntil).toISOString() : null
     });
   };
 
@@ -126,7 +157,7 @@ export default function AdminDashboard() {
             data-testid="switch-maintenance"
             checked={settings?.maintenanceMode === 1}
             onCheckedChange={toggleMaintenance}
-            disabled={updateSettings.isPending}
+            disabled={updateSettings.isPending || !settings}
           />
         </div>
 
@@ -136,10 +167,10 @@ export default function AdminDashboard() {
               ข้อความแจ้งเตือน
             </label>
             <Input 
-              value={settings?.maintenanceMessage || ""}
-              onChange={(e) => updateSettings.mutate({ maintenanceMessage: e.target.value })}
+              value={mMessage}
+              onChange={(e) => setMMessage(e.target.value)}
               placeholder="กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง"
-              className="bg-gray-50 border-none rounded-xl text-sm h-9"
+              className="bg-gray-50 border-none rounded-xl text-sm h-9 mb-2"
             />
           </div>
           <div>
@@ -153,17 +184,16 @@ export default function AdminDashboard() {
                 onChange={(e) => setMUntil(e.target.value)}
                 className="bg-gray-50 border-none rounded-xl text-sm h-9 flex-1"
               />
-              <Button 
-                size="sm"
-                onClick={() => updateSettings.mutate({ 
-                  maintenanceUntil: mUntil ? new Date(mUntil) : null 
-                })}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 h-9 text-xs px-4"
-              >
-                ตั้งเวลา
-              </Button>
             </div>
           </div>
+          <Button 
+            size="sm"
+            onClick={handleSaveSettings}
+            disabled={updateSettings.isPending}
+            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-9 text-xs"
+          >
+            {updateSettings.isPending ? "กำลังบันทึก..." : "บันทึกข้อความและเวลา"}
+          </Button>
         </div>
       </div>
 
