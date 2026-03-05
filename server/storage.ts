@@ -170,14 +170,26 @@ export class MemStorage implements IStorage {
     const memUser = this.users.get(id);
     if (memUser) return memUser;
     
+    console.log("Attempting to fetch user from Firebase:", id);
     // Fallback to Firebase if not in memory (useful after restart)
     if (db) {
       try {
         const doc = await db.collection("users").doc(id).get();
         if (doc.exists) {
-          const data = doc.data() as User;
-          this.users.set(id, data); // Cache in memory
-          return data;
+          const data = doc.data() as any;
+          const user: User = {
+            id: id,
+            studentId: data.studentId || "",
+            name: data.name || "",
+            password: data.password || "1234",
+            schoolCode: data.schoolCode || null,
+            role: data.role || "student",
+            merits: data.merits || 0,
+            trashPoints: data.trashPoints || 0,
+            stamps: data.stamps || 0,
+          };
+          this.users.set(id, user); // Cache in memory
+          return user;
         }
       } catch (e) {
         console.error("Firebase GetUser Error:", e);

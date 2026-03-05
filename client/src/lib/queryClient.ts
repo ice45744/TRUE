@@ -3,10 +3,10 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 function getAuthUserId(): string | null {
   try {
     const saved = localStorage.getItem("st_kaona_user");
-    if (saved) return JSON.parse(saved).id;
-    
-    // Fallback for Firebase auth if available in storage or other means
-    // But based on current logs, the server expects X-User-Id
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.id || parsed.uid; // Support both backend and Firebase formats
+    }
   } catch {}
   return null;
 }
