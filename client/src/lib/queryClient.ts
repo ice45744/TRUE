@@ -4,6 +4,9 @@ function getAuthUserId(): string | null {
   try {
     const saved = localStorage.getItem("st_kaona_user");
     if (saved) return JSON.parse(saved).id;
+    
+    // Fallback for Firebase auth if available in storage or other means
+    // But based on current logs, the server expects X-User-Id
   } catch {}
   return null;
 }

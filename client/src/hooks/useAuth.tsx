@@ -43,17 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
-            setUser(userDoc.data() as AuthUser);
+            const userData = userDoc.data() as AuthUser;
+            setUser(userData);
+            localStorage.setItem("st_kaona_user", JSON.stringify(userData));
           } else {
-            // Fallback or handle missing profile
             setUser(null);
+            localStorage.removeItem("st_kaona_user");
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
           setUser(null);
+          localStorage.removeItem("st_kaona_user");
         }
       } else {
         setUser(null);
+        localStorage.removeItem("st_kaona_user");
       }
       setIsLoading(false);
     });
@@ -67,7 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
     if (userDoc.exists()) {
-      setUser(userDoc.data() as AuthUser);
+      const userData = userDoc.data() as AuthUser;
+      setUser(userData);
+      localStorage.setItem("st_kaona_user", JSON.stringify(userData));
     }
   };
 
@@ -92,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setDoc(doc(db, "users", userCredential.user.uid), newUser);
     await updateProfile(userCredential.user, { displayName: formData.name });
     setUser(newUser);
+    localStorage.setItem("st_kaona_user", JSON.stringify(newUser));
   };
 
   const logout = async () => {
