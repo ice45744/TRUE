@@ -28,17 +28,24 @@ if (!getApps().length) {
             }
 
             const serviceAccount = JSON.parse(serviceAccountStr);
-            // Improved private key handling
-            if (typeof serviceAccount.private_key === 'string') {
-              // Handle both literal newlines and escaped \n
-              serviceAccount.private_key = serviceAccount.private_key
-                .replace(/\\n/g, '\n')
-                .replace(/\n/g, '\n'); 
+            
+            if (serviceAccount.private_key) {
+              // Firebase Admin SDK requires a very specific PEM format.
+              // Replit Secrets often mangle the newlines.
               
-              // Ensure it has the correct header/footer if they were stripped
-              if (!serviceAccount.private_key.includes("-----BEGIN PRIVATE KEY-----")) {
-                serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${serviceAccount.private_key}\n-----END PRIVATE KEY-----\n`;
-              }
+              let key = serviceAccount.private_key;
+              
+              // 1. Convert literal \n to real newlines
+              key = key.replace(/\\n/g, '\n');
+              
+              // 2. Extract the base64 part only
+              const body = key.replace(/-----BEGIN PRIVATE KEY-----/g, '')
+                             .replace(/-----END PRIVATE KEY-----/g, '')
+                             .replace(/\s+/g, ''); // Remove all whitespace
+              
+              // 3. Re-wrap at 64 chars (standard PEM)
+              const lines = body.match(/.{1,64}/g) || [];
+              serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----\n`;
             }
 
             if (serviceAccount.project_id && serviceAccount.private_key) {
