@@ -123,8 +123,10 @@ export default function AdminDashboard() {
             </div>
           </div>
           <Switch 
+            data-testid="switch-maintenance"
             checked={settings?.maintenanceMode === 1}
             onCheckedChange={toggleMaintenance}
+            disabled={updateSettings.isPending}
           />
         </div>
 

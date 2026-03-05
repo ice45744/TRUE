@@ -434,6 +434,22 @@ export class MemStorage implements IStorage {
     }
     
     this.systemSettings = updatedSettings;
+    
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("settings").doc("system").set({
+          ...updatedSettings,
+          maintenanceUntil: updatedSettings.maintenanceUntil instanceof Date 
+            ? updatedSettings.maintenanceUntil.toISOString() 
+            : updatedSettings.maintenanceUntil,
+          lastUpdated: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Firebase Sync Settings Error:", e);
+      }
+    }
+    
     return this.systemSettings;
   }
 }
