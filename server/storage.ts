@@ -15,14 +15,24 @@ if (!getApps().length) {
     // In a real app, you'd use a service account from env secrets
     // For now, we'll use a placeholder or check if env exists
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      if (serviceAccount.project_id && serviceAccount.private_key) {
-        initializeApp({
-          credential: cert(serviceAccount)
-        });
-        console.log("Firebase Admin Initialized successfully");
-      } else {
-        console.warn("Firebase Service Account exists but is missing required fields (project_id or private_key)");
+      try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        // Ensure private_key has real newlines and is correctly formatted for the cert() function
+        if (typeof serviceAccount.private_key === 'string') {
+          // If the key was stringified with literal \n, replace them. 
+          // If it already has actual newlines, this won't change anything.
+          serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
+
+        if (serviceAccount.project_id && serviceAccount.private_key) {
+          initializeApp({
+            credential: cert(serviceAccount)
+          });
+          console.log("Firebase Admin Initialized successfully for project:", serviceAccount.project_id);
+        }
+      } catch (parseError: any) {
+        // Only log a small part of the error to avoid leaking secrets but enough to debug
+        console.error("Firebase Initialization Error:", parseError.message || parseError);
       }
     }
   } catch (e) {
