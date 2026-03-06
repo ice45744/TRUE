@@ -63,8 +63,11 @@ function GoodnesTab() {
     mutationFn: async () => {
       let finalImageUrl = imageLink;
       if (selectedFile) {
+        console.log("Activity: Uploading image to ImgBB...");
         finalImageUrl = await uploadImage(selectedFile);
+        console.log("Activity: Image uploaded:", finalImageUrl);
       }
+      console.log("Activity: Sending request to server...");
       return apiRequest("POST", `/api/activities/${user!.id}`, {
         type: "goodness",
         description,
@@ -73,7 +76,7 @@ function GoodnesTab() {
     },
     onSuccess: async (res) => {
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      console.log("Activity: Success:", data);
       updateUser(data.user);
       queryClient.invalidateQueries({ queryKey: ["/api/activities", user!.id] });
       setDescription("");
@@ -82,6 +85,7 @@ function GoodnesTab() {
       toast({ title: "บันทึกสำเร็จ!", description: "กิจกรรมของคุณถูกส่งเพื่อรอการอนุมัติ" });
     },
     onError: (err: any) => {
+      console.error("Activity error:", err);
       toast({ title: "เกิดข้อผิดพลาด", description: err.message, variant: "destructive" });
     },
   });

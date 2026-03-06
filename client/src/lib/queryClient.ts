@@ -11,7 +11,7 @@ function getAuthUserId(): string | null {
   return null;
 }
 
-function buildHeaders(data?: unknown): Record<string, string> {
+async function buildHeaders(data?: unknown): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   if (data) headers["Content-Type"] = "application/json";
   const userId = getAuthUserId();
@@ -24,8 +24,18 @@ function buildHeaders(data?: unknown): Record<string, string> {
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorMessage = `${res.status}: ${res.statusText}`;
+    try {
+      const data = await res.json();
+      errorMessage = data.message || errorMessage;
+    } catch (e) {
+      // Not JSON, use text if available
+      try {
+        const text = await res.text();
+        if (text) errorMessage = text;
+      } catch (e2) {}
+    }
+    throw new Error(errorMessage);
   }
 }
 
@@ -36,7 +46,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: buildHeaders(data),
+    headers: await buildHeaders(data),
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -53,7 +63,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const url = queryKey[0] === "" ? queryKey.join("/") : "/" + queryKey.join("/");
     const res = await fetch(url, {
-      headers: buildHeaders(),
+      headers: await buildHeaders(),
       credentials: "include",
     });
 

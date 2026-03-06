@@ -46,8 +46,11 @@ export default function ReportPage() {
     mutationFn: async () => {
       let finalImageUrl = imageLink;
       if (selectedFile) {
+        console.log("Report: Uploading image to ImgBB...");
         finalImageUrl = await uploadImage(selectedFile);
+        console.log("Report: Image uploaded:", finalImageUrl);
       }
+      console.log("Report: Sending request to server...");
       return apiRequest("POST", `/api/reports/${user!.id}`, {
         category,
         details,
@@ -56,7 +59,7 @@ export default function ReportPage() {
     },
     onSuccess: async (res) => {
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      console.log("Report: Success:", data);
       setCategory("");
       setDetails("");
       setImageLink("");
@@ -66,6 +69,7 @@ export default function ReportPage() {
       toast({ title: "ส่งเรื่องร้องเรียนสำเร็จ!", description: "สภานักเรียนจะตรวจสอบและดำเนินการโดยเร็ว" });
     },
     onError: (err: any) => {
+      console.error("Report error:", err);
       toast({ title: "เกิดข้อผิดพลาด", description: err.message, variant: "destructive" });
     },
   });

@@ -174,35 +174,46 @@ export async function registerRoutes(
   });
 
   app.post("/api/activities/:userId", async (req, res) => {
-    const result = insertActivitySchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
+    try {
+      log(`POST /api/activities/${req.params.userId} - Body: ${JSON.stringify(req.body)}`);
+      const result = insertActivitySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
+      }
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+      
+      const act = await storage.createActivity(req.params.userId, result.data);
+      if (result.data.type === "goodness" || result.data.type === "checkin") {
+        await storage.updateUserMerits(req.params.userId, 1);
+      } else if (result.data.type === "stamp") {
+        await storage.updateUserTrashPoints(req.params.userId, 1);
+      }
+      
+      const updatedUser = await storage.getUser(req.params.userId);
+      const { password: _, ...safeUser } = updatedUser!;
+      log(`Activity created successfully for ${req.params.userId}`);
+      res.status(201).json({ activity: act, user: safeUser });
+    } catch (error: any) {
+      log(`Error creating activity: ${error.message}`);
+      res.status(500).json({ message: error.message });
     }
-    const user = await storage.getUser(req.params.userId);
-    if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
-    const act = await storage.createActivity(req.params.userId, result.data);
-    if (result.data.type === "goodness" || result.data.type === "checkin") {
-      await storage.updateUserMerits(req.params.userId, 1);
-    } else if (result.data.type === "stamp") {
-      await storage.updateUserTrashPoints(req.params.userId, 1);
-    }
-    const updatedUser = await storage.getUser(req.params.userId);
-    const { password: _, ...safeUser } = updatedUser!;
-    res.status(201).json({ activity: act, user: safeUser });
-  });
-
-  app.get("/api/reports/:userId", async (req, res) => {
-    const rpts = await storage.getReports(req.params.userId);
-    res.json(rpts);
   });
 
   app.post("/api/reports/:userId", async (req, res) => {
-    const result = insertReportSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
+    try {
+      log(`POST /api/reports/${req.params.userId} - Body: ${JSON.stringify(req.body)}`);
+      const result = insertReportSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
+      }
+      const rpt = await storage.createReport(req.params.userId, result.data);
+      log(`Report created successfully for ${req.params.userId}`);
+      res.status(201).json(rpt);
+    } catch (error: any) {
+      log(`Error creating report: ${error.message}`);
+      res.status(500).json({ message: error.message });
     }
-    const rpt = await storage.createReport(req.params.userId, result.data);
-    res.status(201).json(rpt);
   });
 
   // ===== ADMIN ROUTES =====
