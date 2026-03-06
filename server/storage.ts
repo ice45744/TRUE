@@ -30,22 +30,30 @@ if (!getApps().length) {
             const serviceAccount = JSON.parse(serviceAccountStr);
             
             if (serviceAccount.private_key) {
-              // Firebase Admin SDK requires a very specific PEM format.
-              // Replit Secrets often mangle the newlines.
-              
+              // Standard fix for Firebase private keys in environment variables
+              // We handle escaped newlines and ensure the key is properly formatted
               let key = serviceAccount.private_key;
-              
-              // 1. Convert literal \n to real newlines
-              key = key.replace(/\\n/g, '\n');
-              
-              // 2. Extract the base64 part only
-              const body = key.replace(/-----BEGIN PRIVATE KEY-----/g, '')
-                             .replace(/-----END PRIVATE KEY-----/g, '')
-                             .replace(/\s+/g, ''); // Remove all whitespace
-              
-              // 3. Re-wrap at 64 chars (standard PEM)
-              const lines = body.match(/.{1,64}/g) || [];
-              serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----\n`;
+              if (typeof key === 'string') {
+                // Replace escaped \n with actual newlines
+                key = key.replace(/\\n/g, '\n');
+                
+                // Ensure it has headers and footers, and normalize internal spacing
+                const header = "-----BEGIN PRIVATE KEY-----";
+                const footer = "-----END PRIVATE KEY-----";
+                
+                let body = key;
+                if (body.includes(header)) body = body.split(header)[1];
+                if (body.includes(footer)) body = body.split(footer)[0];
+                
+                // Remove all whitespace and existing newlines from the base64 body
+                body = body.replace(/\s+/g, '');
+                
+                // Re-wrap body to 64 chars per line as required by many PEM parsers
+                const chunks = body.match(/.{1,64}/g) || [];
+                if (chunks.length > 0) {
+                  serviceAccount.private_key = `${header}\n${chunks.join('\n')}\n${footer}\n`;
+                }
+              }
             }
 
             if (serviceAccount.project_id && serviceAccount.private_key) {
