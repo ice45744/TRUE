@@ -246,6 +246,29 @@ export class MemStorage implements IStorage {
   }
 
   async getAllUsers(): Promise<User[]> {
+    if (db) {
+      try {
+        const snapshot = await db.collection("users").get();
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          if (!this.users.has(doc.id)) {
+            this.users.set(doc.id, {
+              id: doc.id,
+              studentId: data.studentId || "",
+              name: data.name || "",
+              password: data.password || "1234",
+              schoolCode: data.schoolCode || null,
+              role: data.role || "student",
+              merits: data.merits || 0,
+              trashPoints: data.trashPoints || 0,
+              stamps: data.stamps || 0,
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Firebase GetAllUsers Error:", e);
+      }
+    }
     return Array.from(this.users.values());
   }
 
@@ -265,11 +288,30 @@ export class MemStorage implements IStorage {
       stamps: 0,
     };
     this.users.set(id, user);
+
+    if (db) {
+      try {
+        await db.collection("users").doc(id).set({
+          ...user,
+          createdAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Firebase CreateUser Error:", e);
+      }
+    }
     return user;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    return this.users.delete(id);
+    const deleted = this.users.delete(id);
+    if (db) {
+      try {
+        await db.collection("users").doc(id).delete();
+      } catch (e) {
+        console.error("Firebase DeleteUser Error:", e);
+      }
+    }
+    return deleted;
   }
 
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {
@@ -332,28 +374,89 @@ export class MemStorage implements IStorage {
   }
 
   async getAnnouncements(): Promise<Announcement[]> {
+    if (db) {
+      try {
+        const snapshot = await db.collection("announcements").orderBy("createdAt", "desc").get();
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          if (!this.announcements.has(doc.id)) {
+            this.announcements.set(doc.id, {
+              id: doc.id,
+              title: data.title,
+              content: data.content,
+              authorName: data.authorName,
+              createdAt: new Date(data.createdAt),
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Firebase GetAnnouncements Error:", e);
+      }
+    }
     return Array.from(this.announcements.values())
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAnnouncement(id: string): Promise<Announcement | undefined> {
-    return this.announcements.get(id);
+    const mem = this.announcements.get(id);
+    if (mem) return mem;
+
+    if (db) {
+      try {
+        const doc = await db.collection("announcements").doc(id).get();
+        if (doc.exists) {
+          const data = doc.data() as any;
+          const ann = {
+            id: doc.id,
+            title: data.title,
+            content: data.content,
+            authorName: data.authorName,
+            createdAt: new Date(data.createdAt),
+          };
+          this.announcements.set(id, ann);
+          return ann;
+        }
+      } catch (e) {
+        console.error("Firebase GetAnnouncement Error:", e);
+      }
+    }
+    return undefined;
   }
 
   async createAnnouncement(a: InsertAnnouncement): Promise<Announcement> {
+    const id = randomUUID();
     const ann: Announcement = {
-      id: randomUUID(),
+      id,
       title: a.title,
       content: a.content,
       authorName: a.authorName ?? "สภานักเรียน",
       createdAt: new Date(),
     };
-    this.announcements.set(ann.id, ann);
+    this.announcements.set(id, ann);
+
+    if (db) {
+      try {
+        await db.collection("announcements").doc(id).set({
+          ...ann,
+          createdAt: ann.createdAt.toISOString()
+        });
+      } catch (e) {
+        console.error("Firebase CreateAnnouncement Error:", e);
+      }
+    }
     return ann;
   }
 
   async deleteAnnouncement(id: string): Promise<boolean> {
-    return this.announcements.delete(id);
+    const deleted = this.announcements.delete(id);
+    if (db) {
+      try {
+        await db.collection("announcements").doc(id).delete();
+      } catch (e) {
+        console.error("Firebase DeleteAnnouncement Error:", e);
+      }
+    }
+    return deleted;
   }
 
   createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): QrToken {
@@ -401,19 +504,54 @@ export class MemStorage implements IStorage {
   }
 
   async getActivities(userId: string): Promise<Activity[]> {
+    if (db) {
+      try {
+        const snapshot = await db.collection("activities").where("userId", "==", userId).get();
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          if (!this.activities.has(doc.id)) {
+            this.activities.set(doc.id, {
+              ...data,
+              id: doc.id,
+              createdAt: new Date(data.createdAt)
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Firebase GetActivities Error:", e);
+      }
+    }
     return Array.from(this.activities.values())
       .filter(a => a.userId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAllActivities(): Promise<Activity[]> {
+    if (db) {
+      try {
+        const snapshot = await db.collection("activities").get();
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          if (!this.activities.has(doc.id)) {
+            this.activities.set(doc.id, {
+              ...data,
+              id: doc.id,
+              createdAt: new Date(data.createdAt)
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Firebase GetAllActivities Error:", e);
+      }
+    }
     return Array.from(this.activities.values())
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createActivity(userId: string, a: InsertActivity): Promise<Activity> {
+    const id = randomUUID();
     const act: Activity = {
-      id: randomUUID(),
+      id,
       userId,
       type: a.type,
       description: a.description,
@@ -421,12 +559,12 @@ export class MemStorage implements IStorage {
       status: "pending",
       createdAt: new Date(),
     };
-    this.activities.set(act.id, act);
+    this.activities.set(id, act);
 
     // Sync to Firebase if available
     if (db) {
       try {
-        await db.collection("activities").doc(act.id).set({
+        await db.collection("activities").doc(id).set({
           ...act,
           createdAt: act.createdAt.toISOString()
         });
@@ -452,23 +590,66 @@ export class MemStorage implements IStorage {
     if (!act) return undefined;
     const updated = { ...act, status };
     this.activities.set(id, updated);
+
+    if (db) {
+      try {
+        await db.collection("activities").doc(id).update({ status });
+      } catch (e) {
+        console.error("Firebase UpdateActivity Error:", e);
+      }
+    }
     return updated;
   }
 
   async getReports(userId: string): Promise<Report[]> {
+    if (db) {
+      try {
+        const snapshot = await db.collection("reports").where("userId", "==", userId).get();
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          if (!this.reports.has(doc.id)) {
+            this.reports.set(doc.id, {
+              ...data,
+              id: doc.id,
+              createdAt: new Date(data.createdAt)
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Firebase GetReports Error:", e);
+      }
+    }
     return Array.from(this.reports.values())
       .filter(r => r.userId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAllReports(): Promise<Report[]> {
+    if (db) {
+      try {
+        const snapshot = await db.collection("reports").get();
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          if (!this.reports.has(doc.id)) {
+            this.reports.set(doc.id, {
+              ...data,
+              id: doc.id,
+              createdAt: new Date(data.createdAt)
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Firebase GetAllReports Error:", e);
+      }
+    }
     return Array.from(this.reports.values())
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createReport(userId: string, r: InsertReport): Promise<Report> {
+    const id = randomUUID();
     const report: Report = {
-      id: randomUUID(),
+      id,
       userId,
       category: r.category,
       details: r.details,
@@ -477,7 +658,18 @@ export class MemStorage implements IStorage {
       status: "pending",
       createdAt: new Date(),
     };
-    this.reports.set(report.id, report);
+    this.reports.set(id, report);
+
+    if (db) {
+      try {
+        await db.collection("reports").doc(id).set({
+          ...report,
+          createdAt: report.createdAt.toISOString()
+        });
+      } catch (e) {
+        console.error("Firebase CreateReport Error:", e);
+      }
+    }
     return report;
   }
 
@@ -486,6 +678,14 @@ export class MemStorage implements IStorage {
     if (!rpt) return undefined;
     const updated = { ...rpt, status };
     this.reports.set(id, updated);
+
+    if (db) {
+      try {
+        await db.collection("reports").doc(id).update({ status });
+      } catch (e) {
+        console.error("Firebase UpdateReport Error:", e);
+      }
+    }
     return updated;
   }
 
