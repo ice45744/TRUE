@@ -15,7 +15,10 @@ function buildHeaders(data?: unknown): Record<string, string> {
   const headers: Record<string, string> = {};
   if (data) headers["Content-Type"] = "application/json";
   const userId = getAuthUserId();
-  if (userId) headers["X-User-Id"] = userId;
+  if (userId) {
+    headers["x-user-id"] = userId;
+    headers["X-User-Id"] = userId;
+  }
   return headers;
 }
 

@@ -5,15 +5,18 @@ import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const userId = req.headers["x-user-id"] as string;
-  console.log("Checking admin for user:", userId);
-  if (!userId) return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ (Missing ID)" });
+  log(`Checking admin for user: ${userId}`);
+  if (!userId) {
+    log("Auth failed: Missing x-user-id header");
+    return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ (Missing ID)" });
+  }
   const user = await storage.getUser(userId);
   if (!user) {
-    console.log("User not found in storage:", userId);
+    log(`Auth failed: User ${userId} not found in storage`);
     return res.status(401).json({ message: "ไม่พบผู้ใช้" });
   }
   if (user.role !== "admin") {
-    console.log("User is not admin:", user.role);
+    log(`Auth failed: User ${userId} is not admin. Role: ${user.role}`);
     return res.status(403).json({ message: "ไม่มีสิทธิ์เข้าถึง" });
   }
   next();
@@ -263,8 +266,20 @@ export async function registerRoutes(
   });
 
   app.patch("/api/system/settings", requireAdmin, async (req, res) => {
-    const settings = await storage.updateSystemSettings(req.body);
-    res.json(settings);
+    try {
+      log(`PATCH /api/system/settings - Body: ${JSON.stringify(req.body)}`);
+      // Validate that at least one field is being updated
+      if (Object.keys(req.body).length === 0) {
+        return res.status(400).json({ message: "No data provided for update" });
+      }
+      const settings = await storage.updateSystemSettings(req.body);
+      log(`Settings updated successfully in MemStorage: ${JSON.stringify(settings)}`);
+      res.json(settings);
+    } catch (error: any) {
+      log(`Error updating settings: ${error.message}`);
+      console.error("Full error updating settings:", error);
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.get("/api/admin/stats", requireAdmin, async (_req, res) => {

@@ -709,6 +709,7 @@ export class MemStorage implements IStorage {
   }
 
   async updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings> {
+    console.log("MemStorage: Updating settings with:", settings);
     const updatedSettings = {
       ...this.systemSettings,
       ...settings,
@@ -724,15 +725,20 @@ export class MemStorage implements IStorage {
     // Sync to Firebase
     if (db) {
       try {
+        console.log("MemStorage: Syncing settings to Firebase with ID 'system' in collection 'settings'...");
+        // Use set with merge to ensure we don't overwrite other fields if they exist
         await db.collection("settings").doc("system").set({
-          ...updatedSettings,
+          maintenanceMode: updatedSettings.maintenanceMode,
+          maintenanceMessage: updatedSettings.maintenanceMessage,
           maintenanceUntil: updatedSettings.maintenanceUntil instanceof Date 
             ? updatedSettings.maintenanceUntil.toISOString() 
             : updatedSettings.maintenanceUntil,
           lastUpdated: new Date().toISOString()
-        });
+        }, { merge: true });
+        console.log("MemStorage: Firebase sync successful");
       } catch (e) {
-        console.error("Firebase Sync Settings Error:", e);
+        console.error("MemStorage: Firebase Sync Settings Error:", e);
+        // We don't throw here to ensure MemStorage at least stays updated
       }
     }
     

@@ -61,7 +61,14 @@ export default function AdminDashboard() {
 
   const updateSettings = useMutation({
     mutationFn: async (vars: Partial<SystemSettings>) => {
-      const res = await apiRequest("PATCH", "/api/system/settings", vars);
+      // Create a clean object with only necessary fields
+      const payload: any = {};
+      if (vars.maintenanceMode !== undefined) payload.maintenanceMode = vars.maintenanceMode;
+      if (vars.maintenanceMessage !== undefined) payload.maintenanceMessage = vars.maintenanceMessage;
+      if (vars.maintenanceUntil !== undefined) payload.maintenanceUntil = vars.maintenanceUntil;
+
+      console.log("Mutation: Sending payload:", payload);
+      const res = await apiRequest("PATCH", "/api/system/settings", payload);
       return res.json();
     },
     onSuccess: () => {
@@ -69,9 +76,14 @@ export default function AdminDashboard() {
       toast({ title: "อัปเดตการตั้งค่าสำเร็จ" });
     },
     onError: (error: Error) => {
+      console.error("Mutation error:", error);
+      let errorMsg = error.message;
+      if (errorMsg.includes("401") || errorMsg.includes("403")) {
+        errorMsg = "เซสชันหมดอายุหรือไม่มีสิทธิ์แอดมิน กรุณาเข้าสู่ระบบใหม่";
+      }
       toast({ 
         title: "อัปเดตการตั้งค่าไม่สำเร็จ", 
-        description: error.message, 
+        description: errorMsg, 
         variant: "destructive" 
       });
     },
@@ -189,7 +201,7 @@ export default function AdminDashboard() {
           <Button 
             size="sm"
             onClick={handleSaveSettings}
-            disabled={updateSettings.isPending}
+            disabled={updateSettings.isPending || !settings}
             className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-9 text-xs"
           >
             {updateSettings.isPending ? "กำลังบันทึก..." : "บันทึกข้อความและเวลา"}
