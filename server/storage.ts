@@ -127,7 +127,8 @@ export class MemStorage implements IStorage {
   private permanentCheckinToken: string | null = null;
 
   constructor() {
-    this.seed();
+    // Mock database seeding disabled
+    // this.seed();
   }
 
   private seed() {
