@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema } from "../shared/schema.js";
+import { log } from "./index.js";
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const userId = req.headers["x-user-id"] as string;
