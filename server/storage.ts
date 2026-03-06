@@ -16,22 +16,17 @@ if (!getApps().length) {
         // For now, we'll use a placeholder or check if env exists
         if (process.env.FIREBASE_SERVICE_ACCOUNT) {
           try {
-            let serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+            let saContent = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+            // Handle cases where the JSON might be wrapped in quotes
+            if ((saContent.startsWith("'") && saContent.endsWith("'")) || 
+                (saContent.startsWith('"') && saContent.endsWith('"'))) {
+              saContent = saContent.slice(1, -1);
+            }
             
-            // Replit secrets might sometimes have escaped quotes if not careful, 
-            // but usually it's a raw string. Let's try to handle basic cleanup.
-            if (serviceAccountStr.startsWith("'") && serviceAccountStr.endsWith("'")) {
-              serviceAccountStr = serviceAccountStr.slice(1, -1);
-            }
-            if (serviceAccountStr.startsWith('"') && serviceAccountStr.endsWith('"')) {
-              serviceAccountStr = serviceAccountStr.slice(1, -1);
-            }
-
-            const serviceAccount = JSON.parse(serviceAccountStr);
+            const serviceAccount = JSON.parse(saContent);
             
             if (serviceAccount.private_key) {
               // Standard fix for Firebase private keys in environment variables
-              // We handle escaped newlines and ensure the key is properly formatted
               let key = serviceAccount.private_key;
               if (typeof key === 'string') {
                 // Replace escaped \n with actual newlines
