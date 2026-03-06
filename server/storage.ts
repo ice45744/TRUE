@@ -210,17 +210,12 @@ export class MemStorage implements IStorage {
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    const memUser = this.users.get(id);
-    if (memUser) return memUser;
-    
-    // Fallback to Firebase if not in memory (useful after restart)
     if (db) {
       try {
-        console.log("MemStorage: Attempting to fetch user from Firebase Firestore:", id);
         const doc = await db.collection("users").doc(id).get();
         if (doc.exists) {
           const data = doc.data() as any;
-          const user: User = {
+          return {
             id: id,
             studentId: data.studentId || "",
             name: data.name || "",
@@ -231,11 +226,6 @@ export class MemStorage implements IStorage {
             trashPoints: data.trashPoints || 0,
             stamps: data.stamps || 0,
           };
-          this.users.set(id, user); // Cache in memory
-          console.log("MemStorage: User found in Firebase Firestore and cached:", user.name);
-          return user;
-        } else {
-          console.log("MemStorage: User not found in Firebase Firestore:", id);
         }
       } catch (e) {
         console.error("MemStorage: Firebase Firestore GetUser Error:", e);
@@ -245,17 +235,13 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByStudentId(studentId: string): Promise<User | undefined> {
-    const memUser = Array.from(this.users.values()).find(u => u.studentId === studentId);
-    if (memUser) return memUser;
-
     if (db) {
       try {
-        console.log("MemStorage: Attempting to fetch user by studentId from Firebase Firestore:", studentId);
         const snapshot = await db.collection("users").where("studentId", "==", studentId).limit(1).get();
         if (!snapshot.empty) {
           const doc = snapshot.docs[0];
           const data = doc.data() as any;
-          const user: User = {
+          return {
             id: doc.id,
             studentId: data.studentId || "",
             name: data.name || "",
@@ -266,9 +252,6 @@ export class MemStorage implements IStorage {
             trashPoints: data.trashPoints || 0,
             stamps: data.stamps || 0,
           };
-          this.users.set(user.id, user);
-          console.log("MemStorage: User found by studentId in Firebase Firestore:", user.name);
-          return user;
         }
       } catch (e) {
         console.error("MemStorage: Firebase Firestore GetUserByStudentId Error:", e);
@@ -278,43 +261,29 @@ export class MemStorage implements IStorage {
   }
 
   async getAllUsers(): Promise<User[]> {
+    const users: User[] = [];
     if (db) {
       try {
-        console.log("MemStorage: Syncing all users from Firebase Firestore...");
         const snapshot = await db.collection("users").get();
         snapshot.forEach(doc => {
           const data = doc.data() as any;
-          if (!this.users.has(doc.id)) {
-            this.users.set(doc.id, {
-              id: doc.id,
-              studentId: data.studentId || "",
-              name: data.name || "",
-              password: data.password || "1234",
-              schoolCode: data.schoolCode || null,
-              role: data.role || "student",
-              merits: data.merits || 0,
-              trashPoints: data.trashPoints || 0,
-              stamps: data.stamps || 0,
-            });
-          } else {
-            // Update existing with latest from Firebase
-            const existing = this.users.get(doc.id)!;
-            this.users.set(doc.id, {
-              ...existing,
-              merits: data.merits ?? existing.merits,
-              trashPoints: data.trashPoints ?? existing.trashPoints,
-              stamps: data.stamps ?? existing.stamps,
-              name: data.name ?? existing.name,
-              role: data.role ?? existing.role,
-            });
-          }
+          users.push({
+            id: doc.id,
+            studentId: data.studentId || "",
+            name: data.name || "",
+            password: data.password || "1234",
+            schoolCode: data.schoolCode || null,
+            role: data.role || "student",
+            merits: data.merits || 0,
+            trashPoints: data.trashPoints || 0,
+            stamps: data.stamps || 0,
+          });
         });
-        console.log("MemStorage: Firebase Firestore user sync completed. Total users:", this.users.size);
       } catch (e) {
         console.error("MemStorage: Firebase Firestore GetAllUsers Error:", e);
       }
     }
-    return Array.from(this.users.values());
+    return users;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -332,7 +301,6 @@ export class MemStorage implements IStorage {
       trashPoints: 0,
       stamps: 0,
     };
-    this.users.set(id, user);
 
     if (db) {
       try {
@@ -348,22 +316,22 @@ export class MemStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const deleted = this.users.delete(id);
     if (db) {
       try {
         await db.collection("users").doc(id).delete();
+        return true;
       } catch (e) {
         console.error("Firebase DeleteUser Error:", e);
+        return false;
       }
     }
-    return deleted;
+    return false;
   }
 
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {
     const user = await this.getUser(id);
     if (!user) return undefined;
     const updated = { ...user, merits: user.merits + amount };
-    this.users.set(id, updated);
 
     // Sync to Firebase
     if (db) {
@@ -393,7 +361,6 @@ export class MemStorage implements IStorage {
       trashPoints: newTrash,
       stamps: user.stamps + stampGain,
     };
-    this.users.set(id, updated);
 
     // Sync to Firebase
     if (db) {
@@ -413,55 +380,57 @@ export class MemStorage implements IStorage {
   }
 
   async updateUserStamps(id: string, amount: number): Promise<User | undefined> {
-    const user = this.users.get(id);
+    const user = await this.getUser(id);
     if (!user) return undefined;
     const updated = { ...user, stamps: user.stamps + amount };
-    this.users.set(id, updated);
+    if (db) {
+      try {
+        await db.collection("users").doc(id).update({
+          stamps: updated.stamps,
+          lastUpdated: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Firebase UpdateUserStamps Error:", e);
+      }
+    }
     return updated;
   }
 
   async getAnnouncements(): Promise<Announcement[]> {
+    const announcements: Announcement[] = [];
     if (db) {
       try {
         const snapshot = await db.collection("announcements").orderBy("createdAt", "desc").get();
         snapshot.forEach(doc => {
           const data = doc.data() as any;
-          if (!this.announcements.has(doc.id)) {
-            this.announcements.set(doc.id, {
-              id: doc.id,
-              title: data.title,
-              content: data.content,
-              authorName: data.authorName,
-              createdAt: new Date(data.createdAt),
-            });
-          }
+          announcements.push({
+            id: doc.id,
+            title: data.title,
+            content: data.content,
+            authorName: data.authorName,
+            createdAt: new Date(data.createdAt),
+          });
         });
       } catch (e) {
         console.error("Firebase GetAnnouncements Error:", e);
       }
     }
-    return Array.from(this.announcements.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return announcements;
   }
 
   async getAnnouncement(id: string): Promise<Announcement | undefined> {
-    const mem = this.announcements.get(id);
-    if (mem) return mem;
-
     if (db) {
       try {
         const doc = await db.collection("announcements").doc(id).get();
         if (doc.exists) {
           const data = doc.data() as any;
-          const ann = {
+          return {
             id: doc.id,
             title: data.title,
             content: data.content,
             authorName: data.authorName,
             createdAt: new Date(data.createdAt),
           };
-          this.announcements.set(id, ann);
-          return ann;
         }
       } catch (e) {
         console.error("Firebase GetAnnouncement Error:", e);
@@ -479,7 +448,6 @@ export class MemStorage implements IStorage {
       authorName: a.authorName ?? "สภานักเรียน",
       createdAt: new Date(),
     };
-    this.announcements.set(id, ann);
 
     if (db) {
       try {
@@ -495,27 +463,19 @@ export class MemStorage implements IStorage {
   }
 
   async deleteAnnouncement(id: string): Promise<boolean> {
-    const deleted = this.announcements.delete(id);
     if (db) {
       try {
         await db.collection("announcements").doc(id).delete();
+        return true;
       } catch (e) {
         console.error("Firebase DeleteAnnouncement Error:", e);
+        return false;
       }
     }
-    return deleted;
+    return false;
   }
 
   async getQrToken(token: string): Promise<QrToken | undefined> {
-    const mem = this.qrTokens.get(token);
-    if (mem) {
-      if (mem.expiresAt && new Date() > mem.expiresAt) {
-        this.qrTokens.delete(token);
-        return undefined;
-      }
-      return mem;
-    }
-
     if (db) {
       try {
         const doc = await db.collection("qr_tokens").doc(token).get();
@@ -534,8 +494,6 @@ export class MemStorage implements IStorage {
             return undefined;
           }
           
-          this.qrTokens.set(token, qr);
-          if (qr.type === "checkin") this.permanentCheckinToken = token;
           return qr;
         }
       } catch (e) {
@@ -552,8 +510,6 @@ export class MemStorage implements IStorage {
       
       const token = `st-checkin-${randomUUID().slice(0, 8)}`;
       const qr: QrToken = { token, type, createdAt: new Date(), expiresAt: null, usedBy: new Set() };
-      this.qrTokens.set(token, qr);
-      this.permanentCheckinToken = token;
       
       if (db) {
         try {
@@ -575,7 +531,6 @@ export class MemStorage implements IStorage {
     const mins = expiryMinutes ?? 5;
     const expiresAt = new Date(Date.now() + mins * 60 * 1000);
     const qr: QrToken = { token, type, createdAt: new Date(), expiresAt, usedBy: new Set() };
-    this.qrTokens.set(token, qr);
     
     if (db) {
       try {
@@ -593,17 +548,13 @@ export class MemStorage implements IStorage {
   }
 
   async getCheckinQr(): Promise<QrToken | undefined> {
-    if (this.permanentCheckinToken) {
-      return this.getQrToken(this.permanentCheckinToken);
-    }
-    
     if (db) {
       try {
         const doc = await db.collection("settings").doc("checkin").get();
         if (doc.exists) {
-          this.permanentCheckinToken = doc.data()?.token;
-          if (this.permanentCheckinToken) {
-            return this.getQrToken(this.permanentCheckinToken);
+          const token = doc.data()?.token;
+          if (token) {
+            return this.getQrToken(token);
           }
         }
       } catch (e) {
