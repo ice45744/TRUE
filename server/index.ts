@@ -101,3 +101,5 @@ app.use((req, res, next) => {
     },
   );
 })();
+
+export default app;
