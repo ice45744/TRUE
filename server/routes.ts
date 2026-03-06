@@ -87,7 +87,7 @@ export async function registerRoutes(
     if (type !== "checkin" && type !== "stamp") {
       return res.status(400).json({ message: "ประเภท QR ไม่ถูกต้อง" });
     }
-    const qr = storage.createQrToken(type, type === "stamp" ? (expiryMinutes ?? 5) : null);
+    const qr = await storage.createQrToken(type, type === "stamp" ? (expiryMinutes ?? 5) : null);
     res.json({
       token: qr.token,
       type: qr.type,
@@ -97,7 +97,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/qr/checkin", requireAdmin, async (_req, res) => {
-    const qr = storage.getCheckinQr();
+    const qr = await storage.getCheckinQr();
     if (!qr) return res.json({ exists: false });
     res.json({ exists: true, token: qr.token, usedCount: qr.usedBy.size });
   });
@@ -107,7 +107,7 @@ export async function registerRoutes(
     if (!token || !userId) {
       return res.status(400).json({ message: "ข้อมูลไม่ครบถ้วน" });
     }
-    const qr = storage.getQrToken(token);
+    const qr = await storage.getQrToken(token);
     if (!qr) {
       return res.status(404).json({ message: "QR Code ไม่ถูกต้องหรือหมดอายุ" });
     }
@@ -138,9 +138,9 @@ export async function registerRoutes(
       const now = new Date();
       const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
       const dailyKey = `${userId}_${today}`;
-      storage.markQrUsed(token, dailyKey);
+      await storage.markQrUsed(token, dailyKey);
     } else {
-      const success = storage.markQrUsed(token, userId);
+      const success = await storage.markQrUsed(token, userId);
       if (!success) {
         return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
       }

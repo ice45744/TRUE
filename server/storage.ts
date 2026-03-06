@@ -93,10 +93,10 @@ export interface IStorage {
   createAnnouncement(a: InsertAnnouncement): Promise<Announcement>;
   deleteAnnouncement(id: string): Promise<boolean>;
 
-  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): QrToken;
-  getQrToken(token: string): QrToken | undefined;
-  markQrUsed(token: string, userId: string): boolean;
-  getCheckinQr(): QrToken | undefined;
+  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): Promise<QrToken>;
+  getQrToken(token: string): Promise<QrToken | undefined>;
+  markQrUsed(token: string, userId: string): Promise<boolean>;
+  getCheckinQr(): Promise<QrToken | undefined>;
 
   getActivities(userId: string): Promise<Activity[]>;
   getAllActivities(): Promise<Activity[]>;
@@ -506,16 +506,68 @@ export class MemStorage implements IStorage {
     return deleted;
   }
 
-  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): QrToken {
-    if (type === "checkin") {
-      if (this.permanentCheckinToken) {
-        const existing = this.qrTokens.get(this.permanentCheckinToken);
-        if (existing) return existing;
+  async getQrToken(token: string): Promise<QrToken | undefined> {
+    const mem = this.qrTokens.get(token);
+    if (mem) {
+      if (mem.expiresAt && new Date() > mem.expiresAt) {
+        this.qrTokens.delete(token);
+        return undefined;
       }
+      return mem;
+    }
+
+    if (db) {
+      try {
+        const doc = await db.collection("qr_tokens").doc(token).get();
+        if (doc.exists) {
+          const data = doc.data() as any;
+          const qr: QrToken = {
+            token: doc.id,
+            type: data.type,
+            createdAt: new Date(data.createdAt),
+            expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+            usedBy: new Set(data.usedBy || [])
+          };
+          
+          if (qr.expiresAt && new Date() > qr.expiresAt) {
+            await db.collection("qr_tokens").doc(token).delete();
+            return undefined;
+          }
+          
+          this.qrTokens.set(token, qr);
+          if (qr.type === "checkin") this.permanentCheckinToken = token;
+          return qr;
+        }
+      } catch (e) {
+        console.error("Firebase GetQrToken Error:", e);
+      }
+    }
+    return undefined;
+  }
+
+  async createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): Promise<QrToken> {
+    if (type === "checkin") {
+      const existing = await this.getCheckinQr();
+      if (existing) return existing;
+      
       const token = `st-checkin-${randomUUID().slice(0, 8)}`;
       const qr: QrToken = { token, type, createdAt: new Date(), expiresAt: null, usedBy: new Set() };
       this.qrTokens.set(token, qr);
       this.permanentCheckinToken = token;
+      
+      if (db) {
+        try {
+          await db.collection("qr_tokens").doc(token).set({
+            type,
+            createdAt: qr.createdAt.toISOString(),
+            expiresAt: null,
+            usedBy: []
+          });
+          await db.collection("settings").doc("checkin").set({ token });
+        } catch (e) {
+          console.error("Firebase CreateCheckinQr Error:", e);
+        }
+      }
       return qr;
     }
 
@@ -524,29 +576,59 @@ export class MemStorage implements IStorage {
     const expiresAt = new Date(Date.now() + mins * 60 * 1000);
     const qr: QrToken = { token, type, createdAt: new Date(), expiresAt, usedBy: new Set() };
     this.qrTokens.set(token, qr);
-    return qr;
-  }
-
-  getQrToken(token: string): QrToken | undefined {
-    const qr = this.qrTokens.get(token);
-    if (!qr) return undefined;
-    if (qr.expiresAt && new Date() > qr.expiresAt) {
-      this.qrTokens.delete(token);
-      return undefined;
+    
+    if (db) {
+      try {
+        await db.collection("qr_tokens").doc(token).set({
+          type,
+          createdAt: qr.createdAt.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          usedBy: []
+        });
+      } catch (e) {
+        console.error("Firebase CreateStampQr Error:", e);
+      }
     }
     return qr;
   }
 
-  getCheckinQr(): QrToken | undefined {
-    if (!this.permanentCheckinToken) return undefined;
-    return this.qrTokens.get(this.permanentCheckinToken);
+  async getCheckinQr(): Promise<QrToken | undefined> {
+    if (this.permanentCheckinToken) {
+      return this.getQrToken(this.permanentCheckinToken);
+    }
+    
+    if (db) {
+      try {
+        const doc = await db.collection("settings").doc("checkin").get();
+        if (doc.exists) {
+          this.permanentCheckinToken = doc.data()?.token;
+          if (this.permanentCheckinToken) {
+            return this.getQrToken(this.permanentCheckinToken);
+          }
+        }
+      } catch (e) {
+        console.error("Firebase GetCheckinQrToken Error:", e);
+      }
+    }
+    return undefined;
   }
 
-  markQrUsed(token: string, userId: string): boolean {
-    const qr = this.qrTokens.get(token);
+  async markQrUsed(token: string, userId: string): Promise<boolean> {
+    const qr = await this.getQrToken(token);
     if (!qr) return false;
     if (qr.usedBy.has(userId)) return false;
+    
     qr.usedBy.add(userId);
+    
+    if (db) {
+      try {
+        await db.collection("qr_tokens").doc(token).update({
+          usedBy: Array.from(qr.usedBy)
+        });
+      } catch (e) {
+        console.error("Firebase MarkQrUsed Error:", e);
+      }
+    }
     return true;
   }
 
@@ -634,8 +716,27 @@ export class MemStorage implements IStorage {
 
   async updateActivityStatus(id: string, status: string): Promise<Activity | undefined> {
     const act = this.activities.get(id);
-    if (!act) return undefined;
-    const updated = { ...act, status };
+    if (!act) {
+      if (db) {
+        try {
+          const doc = await db.collection("activities").doc(id).get();
+          if (doc.exists) {
+            const data = doc.data() as any;
+            const fetchedAct = { ...data, id: doc.id, createdAt: new Date(data.createdAt) };
+            this.activities.set(id, fetchedAct);
+          } else {
+            return undefined;
+          }
+        } catch (e) {
+          console.error("Firebase Fetch Activity Error:", e);
+          return undefined;
+        }
+      } else {
+        return undefined;
+      }
+    }
+
+    const updated = { ...this.activities.get(id)!, status };
     this.activities.set(id, updated);
 
     if (db) {
@@ -654,13 +755,11 @@ export class MemStorage implements IStorage {
         const snapshot = await db.collection("reports").where("userId", "==", userId).get();
         snapshot.forEach(doc => {
           const data = doc.data() as any;
-          if (!this.reports.has(doc.id)) {
-            this.reports.set(doc.id, {
-              ...data,
-              id: doc.id,
-              createdAt: new Date(data.createdAt)
-            });
-          }
+          this.reports.set(doc.id, {
+            ...data,
+            id: doc.id,
+            createdAt: new Date(data.createdAt)
+          });
         });
       } catch (e) {
         console.error("Firebase GetReports Error:", e);
@@ -677,13 +776,11 @@ export class MemStorage implements IStorage {
         const snapshot = await db.collection("reports").get();
         snapshot.forEach(doc => {
           const data = doc.data() as any;
-          if (!this.reports.has(doc.id)) {
-            this.reports.set(doc.id, {
-              ...data,
-              id: doc.id,
-              createdAt: new Date(data.createdAt)
-            });
-          }
+          this.reports.set(doc.id, {
+            ...data,
+            id: doc.id,
+            createdAt: new Date(data.createdAt)
+          });
         });
       } catch (e) {
         console.error("Firebase GetAllReports Error:", e);
@@ -722,8 +819,27 @@ export class MemStorage implements IStorage {
 
   async updateReportStatus(id: string, status: string): Promise<Report | undefined> {
     const rpt = this.reports.get(id);
-    if (!rpt) return undefined;
-    const updated = { ...rpt, status };
+    if (!rpt) {
+      if (db) {
+        try {
+          const doc = await db.collection("reports").doc(id).get();
+          if (doc.exists) {
+            const data = doc.data() as any;
+            const fetchedRpt = { ...data, id: doc.id, createdAt: new Date(data.createdAt) };
+            this.reports.set(id, fetchedRpt);
+          } else {
+            return undefined;
+          }
+        } catch (e) {
+          console.error("Firebase Fetch Report Error:", e);
+          return undefined;
+        }
+      } else {
+        return undefined;
+      }
+    }
+
+    const updated = { ...this.reports.get(id)!, status };
     this.reports.set(id, updated);
 
     if (db) {
