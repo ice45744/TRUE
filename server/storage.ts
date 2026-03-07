@@ -318,16 +318,30 @@ export class MemStorage implements IStorage {
       stamps: 0,
     };
 
+    // Cache in memory immediately
+    this.users.set(id, user);
+    console.log(`MemStorage: Created user ${id} in memory for studentId ${insertUser.studentId}`);
+
+    // Save to Firebase
     if (db) {
       try {
         await db.collection("users").doc(id).set({
           ...user,
           createdAt: new Date().toISOString()
         });
-      } catch (e) {
-        console.error("Firebase CreateUser Error:", e);
+        console.log(`MemStorage: User ${id} saved to Firebase successfully`);
+      } catch (e: any) {
+        console.error("Firebase CreateUser Error:", e?.message || e);
+        console.error("User data may not be persisted properly. Details:", {
+          userId: id,
+          studentId: insertUser.studentId,
+          firebaseInitialized: !!db
+        });
       }
+    } else {
+      console.warn("MemStorage: Firebase not initialized - user created in memory only");
     }
+    
     return user;
   }
 
