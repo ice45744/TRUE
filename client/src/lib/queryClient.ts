@@ -5,7 +5,7 @@ function getAuthUserId(): string | null {
     const saved = localStorage.getItem("st_kaona_user");
     if (saved) {
       const parsed = JSON.parse(saved);
-      return parsed.id || parsed.uid; // Support both backend and Firebase formats
+      return parsed.id;
     }
   } catch {}
   return null;
