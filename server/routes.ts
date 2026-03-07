@@ -28,6 +28,24 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  app.post("/api/auth/sync", async (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) {
+      return res.status(401).json({ message: "ไม่พบข้อมูลผู้ใช้" });
+    }
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "ไม่พบผู้ใช้ในระบบ" });
+      }
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      log(`Error syncing user: ${error}`);
+      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการซิงค์ข้อมูล" });
+    }
+  });
+
   app.post("/api/auth/login", async (req, res) => {
     const result = loginSchema.safeParse(req.body);
     if (!result.success) {

@@ -211,12 +211,19 @@ export class MemStorage implements IStorage {
   }
 
   async getUser(id: string): Promise<User | undefined> {
+    const mem = this.users.get(id);
+    if (mem) {
+      console.log(`MemStorage: Found user ${id} in memory`);
+      return mem;
+    }
+
+    console.log(`MemStorage: User ${id} not in memory, checking Firebase...`);
     if (db) {
       try {
         const doc = await db.collection("users").doc(id).get();
         if (doc.exists) {
           const data = doc.data() as any;
-          return {
+          const user: User = {
             id: id,
             studentId: data.studentId || "",
             name: data.name || "",
@@ -227,9 +234,14 @@ export class MemStorage implements IStorage {
             trashPoints: data.trashPoints || 0,
             stamps: data.stamps || 0,
           };
+          console.log(`MemStorage: Found user ${id} in Firebase, caching in memory`);
+          this.users.set(id, user);
+          return user;
+        } else {
+          console.log(`MemStorage: User ${id} not found in Firebase`);
         }
       } catch (e) {
-        console.error("MemStorage: Firebase Firestore GetUser Error:", e);
+        console.error(`MemStorage: Firebase Firestore GetUser Error for ${id}:`, e);
       }
     }
     return undefined;
@@ -242,7 +254,7 @@ export class MemStorage implements IStorage {
         if (!snapshot.empty) {
           const doc = snapshot.docs[0];
           const data = doc.data() as any;
-          return {
+          const user: User = {
             id: doc.id,
             studentId: data.studentId || "",
             name: data.name || "",
@@ -253,6 +265,9 @@ export class MemStorage implements IStorage {
             trashPoints: data.trashPoints || 0,
             stamps: data.stamps || 0,
           };
+          console.log(`MemStorage: Found user by studentId ${studentId}, caching with id ${user.id}`);
+          this.users.set(user.id, user);
+          return user;
         }
       } catch (e) {
         console.error("MemStorage: Firebase Firestore GetUserByStudentId Error:", e);

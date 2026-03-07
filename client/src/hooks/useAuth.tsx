@@ -74,6 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = userDoc.data() as AuthUser;
       setUser(userData);
       localStorage.setItem("st_kaona_user", JSON.stringify(userData));
+      
+      // Sync with backend
+      try {
+        await apiRequest("POST", "/api/auth/sync");
+      } catch (e) {
+        console.warn("Backend sync failed (non-critical):", e);
+      }
     }
   };
 
@@ -99,6 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await updateProfile(userCredential.user, { displayName: formData.name });
     setUser(newUser);
     localStorage.setItem("st_kaona_user", JSON.stringify(newUser));
+    
+    // Sync with backend
+    try {
+      await apiRequest("POST", "/api/auth/sync");
+    } catch (e) {
+      console.warn("Backend sync failed (non-critical):", e);
+    }
   };
 
   const logout = async () => {
