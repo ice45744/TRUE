@@ -90,17 +90,18 @@ export default function AdminDashboard() {
   });
 
   const toggleMaintenance = (checked: boolean) => {
+    const newMode = checked ? 1 : 0;
     updateSettings.mutate({ 
-      maintenanceMode: checked ? 1 : 0,
+      maintenanceMode: newMode,
       maintenanceMessage: mMessage || undefined,
-      maintenanceUntil: checked && mUntil ? new Date(mUntil).toISOString() : null
+      maintenanceUntil: checked && mUntil ? new Date(mUntil) : null
     });
   };
 
   const handleSaveSettings = () => {
     updateSettings.mutate({
       maintenanceMessage: mMessage,
-      maintenanceUntil: mUntil ? new Date(mUntil).toISOString() : null
+      maintenanceUntil: mUntil ? new Date(mUntil) : null
     });
   };
 

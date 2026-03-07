@@ -89,7 +89,12 @@ export const systemSettings = pgTable("system_settings", {
   maintenanceUntil: timestamp("maintenance_until"),
 });
 
-export const insertSystemSettingsSchema = createInsertSchema(systemSettings).pick({
+export const insertSystemSettingsSchema = createInsertSchema(systemSettings).extend({
+  maintenanceUntil: z.preprocess((arg) => {
+    if (typeof arg === "string" || arg instanceof Date) return new Date(arg);
+    return arg;
+  }, z.date().nullable()),
+}).pick({
   maintenanceMode: true,
   maintenanceMessage: true,
   maintenanceUntil: true,

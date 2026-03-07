@@ -805,15 +805,17 @@ export class MemStorage implements IStorage {
   }
 
   async getSystemSettings(): Promise<SystemSettings> {
-    // If memory has default, try fetching from Firebase
-    if (this.systemSettings.id === "default" && db) {
+    // Try fetching from Firebase every time to ensure it's up to date
+    if (db) {
       try {
         const doc = await db.collection("settings").doc("system").get();
         if (doc.exists) {
           const data = doc.data() as any;
           this.systemSettings = {
-            ...data,
-            maintenanceUntil: data.maintenanceUntil ? new Date(data.maintenanceUntil) : null
+            id: "default",
+            maintenanceMode: data.maintenanceMode ?? 0,
+            maintenanceMessage: data.maintenanceMessage ?? "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
+            maintenanceUntil: data.maintenanceUntil ? new Date(data.maintenanceUntil) : null,
           };
         }
       } catch (e) {
