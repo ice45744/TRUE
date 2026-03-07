@@ -1,14 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiRequest } from "@/lib/queryClient";
-import { auth, db } from "@/lib/firebase";
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
-  updateProfile
-} from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 interface AuthUser {
   id: string;
@@ -38,93 +29,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as AuthUser;
-            setUser(userData);
-            localStorage.setItem("st_kaona_user", JSON.stringify(userData));
-          } else {
-            setUser(null);
-            localStorage.removeItem("st_kaona_user");
-          }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setUser(null);
-          localStorage.removeItem("st_kaona_user");
-        }
-      } else {
-        setUser(null);
+    // Load user from localStorage on app startup
+    const saved = localStorage.getItem("st_kaona_user");
+    if (saved) {
+      try {
+        const user = JSON.parse(saved);
+        setUser(user);
+      } catch (e) {
         localStorage.removeItem("st_kaona_user");
       }
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
+    setIsLoading(false);
   }, []);
 
   const login = async (studentId: string, password: string) => {
-    // Firebase uses email, so we've mapped studentId to a pseudo-email
-    const email = `${studentId}@school.com`;
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as AuthUser;
-      setUser(userData);
-      localStorage.setItem("st_kaona_user", JSON.stringify(userData));
-      
-      // Sync with backend
-      try {
-        await apiRequest("POST", "/api/auth/sync");
-      } catch (e) {
-        console.warn("Backend sync failed (non-critical):", e);
-      }
-    }
+    // Use backend authentication
+    const res = await apiRequest("POST", "/api/auth/login", {
+      studentId,
+      password,
+    });
+    const data = await res.json();
+    setUser(data.user);
+    localStorage.setItem("st_kaona_user", JSON.stringify(data.user));
   };
 
   const register = async (formData: { studentId: string; name: string; password: string; schoolCode?: string }) => {
-    const email = `${formData.studentId}@school.com`;
-    const userCredential = await createUserWithEmailAndPassword(auth, email, formData.password);
-    
-    const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
-    const isAdmin = formData.schoolCode === ADMIN_CODE;
-    
-    const newUser: AuthUser = {
-      id: userCredential.user.uid,
+    // Use backend registration
+    const res = await apiRequest("POST", "/api/auth/register", {
       studentId: formData.studentId,
       name: formData.name,
-      schoolCode: formData.schoolCode ?? null,
-      role: isAdmin ? "admin" : "student",
-      merits: 0,
-      trashPoints: 0,
-      stamps: 0,
-    };
-
-    await setDoc(doc(db, "users", userCredential.user.uid), newUser);
-    await updateProfile(userCredential.user, { displayName: formData.name });
-    setUser(newUser);
-    localStorage.setItem("st_kaona_user", JSON.stringify(newUser));
-    
-    // Sync with backend
-    try {
-      await apiRequest("POST", "/api/auth/sync");
-    } catch (e) {
-      console.warn("Backend sync failed (non-critical):", e);
-    }
+      password: formData.password,
+      schoolCode: formData.schoolCode,
+    });
+    const data = await res.json();
+    setUser(data.user);
+    localStorage.setItem("st_kaona_user", JSON.stringify(data.user));
   };
 
   const logout = async () => {
-    await signOut(auth);
     setUser(null);
+    localStorage.removeItem("st_kaona_user");
   };
 
-  const updateUser = async (updated: AuthUser) => {
-    if (user) {
-      await updateDoc(doc(db, "users", user.id), { ...updated });
-      setUser(updated);
-    }
+  const updateUser = (updated: AuthUser) => {
+    setUser(updated);
+    localStorage.setItem("st_kaona_user", JSON.stringify(updated));
   };
 
   const isAdmin = user?.role === "admin";
