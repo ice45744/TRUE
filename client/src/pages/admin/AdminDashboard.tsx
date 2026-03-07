@@ -94,15 +94,15 @@ export default function AdminDashboard() {
     updateSettings.mutate({ 
       maintenanceMode: newMode,
       maintenanceMessage: mMessage || undefined,
-      maintenanceUntil: checked && mUntil ? new Date(mUntil) : null
-    });
+      maintenanceUntil: checked && mUntil ? mUntil : null
+    } as any);
   };
 
   const handleSaveSettings = () => {
     updateSettings.mutate({
       maintenanceMessage: mMessage,
-      maintenanceUntil: mUntil ? new Date(mUntil) : null
-    });
+      maintenanceUntil: mUntil ? mUntil : null
+    } as any);
   };
 
   return (
