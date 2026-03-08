@@ -6,9 +6,52 @@ import {
   type SystemSettings, type InsertSystemSettings,
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 
-// In-memory storage only (no Firebase backend)
-console.log("Storage initialized: Using in-memory storage only");
+// Initialize Firebase Admin
+let db: any = null;
+if (!getApps().length) {
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      let saContent = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+      if ((saContent.startsWith("'") && saContent.endsWith("'")) || 
+          (saContent.startsWith('"') && saContent.endsWith('"'))) {
+        saContent = saContent.slice(1, -1);
+      }
+      
+      const serviceAccount = JSON.parse(saContent);
+      if (serviceAccount.private_key) {
+        let key = serviceAccount.private_key;
+        if (typeof key === 'string') {
+          key = key.replace(/\\n/g, '\n');
+          const header = "-----BEGIN PRIVATE KEY-----";
+          const footer = "-----END PRIVATE KEY-----";
+          let body = key;
+          if (body.includes(header)) body = body.split(header)[1];
+          if (body.includes(footer)) body = body.split(footer)[0];
+          body = body.replace(/\s+/g, '');
+          const chunks = body.match(/.{1,64}/g) || [];
+          if (chunks.length > 0) {
+            serviceAccount.private_key = `${header}\n${chunks.join('\n')}\n${footer}\n`;
+          }
+        }
+      }
+
+      if (serviceAccount.project_id && serviceAccount.private_key) {
+        initializeApp({
+          credential: cert(serviceAccount)
+        });
+        db = getFirestore();
+        console.log("✓ Firebase Admin SDK initialized successfully");
+      }
+    } else {
+      console.log("ℹ Firebase service account not configured - using in-memory storage only");
+    }
+  } catch (e) {
+    console.error("Firebase initialization warning:", e);
+  }
+}
 
 export interface QrToken {
   token: string;
@@ -112,6 +155,17 @@ export class MemStorage implements IStorage {
     };
 
     this.users.set(id, user);
+    
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("users").doc(id).set(user);
+        console.log(`Firebase Sync: Saved user ${id}`);
+      } catch (e) {
+        console.error(`Firebase Sync Error (user ${id}):`, e);
+      }
+    }
+    
     console.log(`MemStorage: Created user ${id} (studentId: ${insertUser.studentId}, role: ${user.role})`);
     return user;
   }
@@ -129,6 +183,17 @@ export class MemStorage implements IStorage {
     if (!user) return undefined;
     const updated = { ...user, merits: user.merits + amount };
     this.users.set(id, updated);
+    
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("users").doc(id).update({ merits: updated.merits });
+        console.log(`Firebase Sync: Updated user ${id} merits to ${updated.merits}`);
+      } catch (e) {
+        console.error(`Firebase Sync Error (user ${id}):`, e);
+      }
+    }
+    
     console.log(`MemStorage: Updated merits for user ${id}: ${updated.merits}`);
     return updated;
   }
@@ -146,6 +211,20 @@ export class MemStorage implements IStorage {
       stamps: user.stamps + stampGain,
     };
     this.users.set(id, updated);
+    
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("users").doc(id).update({ 
+          trashPoints: updated.trashPoints,
+          stamps: updated.stamps 
+        });
+        console.log(`Firebase Sync: Updated user ${id} trash=${updated.trashPoints}, stamps=${updated.stamps}`);
+      } catch (e) {
+        console.error(`Firebase Sync Error (user ${id}):`, e);
+      }
+    }
+    
     console.log(`MemStorage: Updated trash/stamps for user ${id}: trash=${updated.trashPoints}, stamps=${updated.stamps}`);
     return updated;
   }
@@ -178,6 +257,20 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.announcements.set(id, ann);
+    
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("announcements").doc(id).set({
+          ...ann,
+          createdAt: ann.createdAt.toISOString()
+        });
+        console.log(`Firebase Sync: Saved announcement ${id}`);
+      } catch (e) {
+        console.error(`Firebase Sync Error (announcement ${id}):`, e);
+      }
+    }
+    
     console.log(`MemStorage: Created announcement ${id}`);
     return ann;
   }
@@ -262,6 +355,20 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.activities.set(id, act);
+    
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("activities").doc(id).set({
+          ...act,
+          createdAt: act.createdAt.toISOString()
+        });
+        console.log(`Firebase Sync: Saved activity ${id}`);
+      } catch (e) {
+        console.error(`Firebase Sync Error (activity ${id}):`, e);
+      }
+    }
+    
     console.log(`MemStorage: Created activity ${id} for user ${userId}`);
     return act;
   }
@@ -299,6 +406,20 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.reports.set(id, rep);
+    
+    // Sync to Firebase
+    if (db) {
+      try {
+        await db.collection("reports").doc(id).set({
+          ...rep,
+          createdAt: rep.createdAt.toISOString()
+        });
+        console.log(`Firebase Sync: Saved report ${id}`);
+      } catch (e) {
+        console.error(`Firebase Sync Error (report ${id}):`, e);
+      }
+    }
+    
     console.log(`MemStorage: Created report ${id} for user ${userId}`);
     return rep;
   }
