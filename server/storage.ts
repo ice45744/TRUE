@@ -7,6 +7,9 @@ import {
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
 
+// In-memory storage only (no Firebase backend)
+console.log("Storage initialized: Using in-memory storage only");
+
 export interface QrToken {
   token: string;
   type: "checkin" | "stamp";
@@ -30,10 +33,10 @@ export interface IStorage {
   createAnnouncement(a: InsertAnnouncement): Promise<Announcement>;
   deleteAnnouncement(id: string): Promise<boolean>;
 
-  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): QrToken;
-  getQrToken(token: string): QrToken | undefined;
-  markQrUsed(token: string, userId: string): boolean;
-  getCheckinQr(): QrToken | undefined;
+  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): Promise<QrToken>;
+  getQrToken(token: string): Promise<QrToken | undefined>;
+  markQrUsed(token: string, userId: string): Promise<boolean>;
+  getCheckinQr(): Promise<QrToken | undefined>;
 
   getActivities(userId: string): Promise<Activity[]>;
   getAllActivities(): Promise<Activity[]>;
@@ -61,97 +64,31 @@ export class MemStorage implements IStorage {
     maintenanceMessage: "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
     maintenanceUntil: null,
   };
-  private permanentCheckinToken: string | null = null;
 
   constructor() {
-    this.seed();
-  }
-
-  private seed() {
-    const user1Id = randomUUID();
-    const user1: User = {
-      id: user1Id,
-      studentId: "19823",
-      name: "Kittipot Ice",
-      password: "1234",
-      schoolCode: "ST001",
-      role: "student",
-      merits: 0,
-      trashPoints: 0,
-      stamps: 0,
-    };
-    this.users.set(user1Id, user1);
-
-    const user2Id = randomUUID();
-    const user2: User = {
-      id: user2Id,
-      studentId: "12345",
-      name: "สมชาย ใจดี",
-      password: "1234",
-      schoolCode: "ST001",
-      role: "student",
-      merits: 3,
-      trashPoints: 2,
-      stamps: 0,
-    };
-    this.users.set(user2Id, user2);
-
-    const user3Id = randomUUID();
-    const user3: User = {
-      id: user3Id,
-      studentId: "11111",
-      name: "สมหญิง รักเรียน",
-      password: "1234",
-      schoolCode: "ST001",
-      role: "student",
-      merits: 7,
-      trashPoints: 5,
-      stamps: 1,
-    };
-    this.users.set(user3Id, user3);
-
-    const ann1: Announcement = {
-      id: randomUUID(),
-      title: "ขอเชิญร่วมกิจกรรมวันเด็กแห่งชาติ",
-      content: "สภานักเรียนขอเชิญนักเรียนทุกคนร่วมกิจกรรมวันเด็กแห่งชาติ ในวันเสาร์ที่ 11 มกราคม 2568 ณ อาคารอเนกประสงค์ มีกิจกรรมมากมาย พร้อมของรางวัลสำหรับนักเรียนที่เข้าร่วม",
-      authorName: "สภานักเรียน",
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    };
-    const ann2: Announcement = {
-      id: randomUUID(),
-      title: "ประกาศผลนักเรียนแต้มความดีประจำเดือน",
-      content: "สภานักเรียนขอแสดงความยินดีกับนักเรียนที่ได้รับแต้มความดีสูงสุดประจำเดือนมกราคม",
-      authorName: "สภานักเรียน",
-      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    };
-    this.announcements.set(ann1.id, ann1);
-    this.announcements.set(ann2.id, ann2);
-
-    const act1Id = randomUUID();
-    this.activities.set(act1Id, {
-      id: act1Id, userId: user2Id, type: "goodness", description: "ช่วยครูยกของ",
-      imageUrl: null, status: "pending", createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    });
-    const act2Id = randomUUID();
-    this.activities.set(act2Id, {
-      id: act2Id, userId: user3Id, type: "checkin", description: "เช็คชื่อผ่าน QR Code",
-      imageUrl: null, status: "approved", createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    });
-
-    const rpt1Id = randomUUID();
-    this.reports.set(rpt1Id, {
-      id: rpt1Id, userId: user2Id, category: "ความสะอาดและสิ่งแวดล้อม",
-      details: "ถังขยะหน้าอาคาร 3 เต็มมาก ไม่มีคนมาเก็บ", imageUrl: null, imageLink: null,
-      status: "pending", createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    });
+    // Mock database seeding disabled
+    // this.seed();
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const mem = this.users.get(id);
+    if (mem) {
+      console.log(`MemStorage: Found user ${id} in memory`);
+      return mem;
+    }
+    console.log(`MemStorage: User ${id} not found in memory`);
+    return undefined;
   }
 
   async getUserByStudentId(studentId: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(u => u.studentId === studentId);
+    for (const user of this.users.values()) {
+      if (user.studentId === studentId) {
+        console.log(`MemStorage: Found user by studentId ${studentId}`);
+        return user;
+      }
+    }
+    console.log(`MemStorage: User with studentId ${studentId} not found`);
+    return undefined;
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -173,24 +110,31 @@ export class MemStorage implements IStorage {
       trashPoints: 0,
       stamps: 0,
     };
+
     this.users.set(id, user);
+    console.log(`MemStorage: Created user ${id} (studentId: ${insertUser.studentId}, role: ${user.role})`);
     return user;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    return this.users.delete(id);
+    const deleted = this.users.delete(id);
+    if (deleted) {
+      console.log(`MemStorage: Deleted user ${id}`);
+    }
+    return deleted;
   }
 
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {
-    const user = this.users.get(id);
+    const user = await this.getUser(id);
     if (!user) return undefined;
     const updated = { ...user, merits: user.merits + amount };
     this.users.set(id, updated);
+    console.log(`MemStorage: Updated merits for user ${id}: ${updated.merits}`);
     return updated;
   }
 
   async updateUserTrashPoints(id: string, amount: number): Promise<User | undefined> {
-    const user = this.users.get(id);
+    const user = await this.getUser(id);
     if (!user) return undefined;
     const newTrash = user.trashPoints + amount;
     const oldStampsFromTrash = Math.floor(user.trashPoints / 10);
@@ -202,14 +146,16 @@ export class MemStorage implements IStorage {
       stamps: user.stamps + stampGain,
     };
     this.users.set(id, updated);
+    console.log(`MemStorage: Updated trash/stamps for user ${id}: trash=${updated.trashPoints}, stamps=${updated.stamps}`);
     return updated;
   }
 
   async updateUserStamps(id: string, amount: number): Promise<User | undefined> {
-    const user = this.users.get(id);
+    const user = await this.getUser(id);
     if (!user) return undefined;
     const updated = { ...user, stamps: user.stamps + amount };
     this.users.set(id, updated);
+    console.log(`MemStorage: Updated stamps for user ${id}: ${updated.stamps}`);
     return updated;
   }
 
@@ -223,31 +169,45 @@ export class MemStorage implements IStorage {
   }
 
   async createAnnouncement(a: InsertAnnouncement): Promise<Announcement> {
+    const id = randomUUID();
     const ann: Announcement = {
-      id: randomUUID(),
+      id,
       title: a.title,
       content: a.content,
       authorName: a.authorName ?? "สภานักเรียน",
       createdAt: new Date(),
     };
-    this.announcements.set(ann.id, ann);
+    this.announcements.set(id, ann);
+    console.log(`MemStorage: Created announcement ${id}`);
     return ann;
   }
 
   async deleteAnnouncement(id: string): Promise<boolean> {
-    return this.announcements.delete(id);
+    const deleted = this.announcements.delete(id);
+    if (deleted) {
+      console.log(`MemStorage: Deleted announcement ${id}`);
+    }
+    return deleted;
   }
 
-  createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): QrToken {
+  async getQrToken(token: string): Promise<QrToken | undefined> {
+    const qr = this.qrTokens.get(token);
+    if (qr && qr.expiresAt && new Date() > qr.expiresAt) {
+      this.qrTokens.delete(token);
+      return undefined;
+    }
+    return qr;
+  }
+
+  async createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): Promise<QrToken> {
     if (type === "checkin") {
-      if (this.permanentCheckinToken) {
-        const existing = this.qrTokens.get(this.permanentCheckinToken);
-        if (existing) return existing;
-      }
+      const existing = await this.getCheckinQr();
+      if (existing) return existing;
+      
       const token = `st-checkin-${randomUUID().slice(0, 8)}`;
       const qr: QrToken = { token, type, createdAt: new Date(), expiresAt: null, usedBy: new Set() };
       this.qrTokens.set(token, qr);
-      this.permanentCheckinToken = token;
+      console.log(`MemStorage: Created checkin QR token: ${token}`);
       return qr;
     }
 
@@ -256,29 +216,26 @@ export class MemStorage implements IStorage {
     const expiresAt = new Date(Date.now() + mins * 60 * 1000);
     const qr: QrToken = { token, type, createdAt: new Date(), expiresAt, usedBy: new Set() };
     this.qrTokens.set(token, qr);
+    console.log(`MemStorage: Created stamp QR token: ${token} (expires in ${mins} mins)`);
     return qr;
   }
 
-  getQrToken(token: string): QrToken | undefined {
-    const qr = this.qrTokens.get(token);
-    if (!qr) return undefined;
-    if (qr.expiresAt && new Date() > qr.expiresAt) {
-      this.qrTokens.delete(token);
-      return undefined;
+  async getCheckinQr(): Promise<QrToken | undefined> {
+    for (const qr of this.qrTokens.values()) {
+      if (qr.type === "checkin" && (!qr.expiresAt || new Date() <= qr.expiresAt)) {
+        return qr;
+      }
     }
-    return qr;
+    return undefined;
   }
 
-  getCheckinQr(): QrToken | undefined {
-    if (!this.permanentCheckinToken) return undefined;
-    return this.qrTokens.get(this.permanentCheckinToken);
-  }
-
-  markQrUsed(token: string, userId: string): boolean {
-    const qr = this.qrTokens.get(token);
+  async markQrUsed(token: string, userId: string): Promise<boolean> {
+    const qr = await this.getQrToken(token);
     if (!qr) return false;
     if (qr.usedBy.has(userId)) return false;
+    
     qr.usedBy.add(userId);
+    console.log(`MemStorage: Marked QR token ${token} as used by ${userId}`);
     return true;
   }
 
@@ -294,8 +251,9 @@ export class MemStorage implements IStorage {
   }
 
   async createActivity(userId: string, a: InsertActivity): Promise<Activity> {
+    const id = randomUUID();
     const act: Activity = {
-      id: randomUUID(),
+      id,
       userId,
       type: a.type,
       description: a.description,
@@ -303,7 +261,8 @@ export class MemStorage implements IStorage {
       status: "pending",
       createdAt: new Date(),
     };
-    this.activities.set(act.id, act);
+    this.activities.set(id, act);
+    console.log(`MemStorage: Created activity ${id} for user ${userId}`);
     return act;
   }
 
@@ -312,6 +271,7 @@ export class MemStorage implements IStorage {
     if (!act) return undefined;
     const updated = { ...act, status };
     this.activities.set(id, updated);
+    console.log(`MemStorage: Updated activity ${id} status to ${status}`);
     return updated;
   }
 
@@ -327,8 +287,9 @@ export class MemStorage implements IStorage {
   }
 
   async createReport(userId: string, r: InsertReport): Promise<Report> {
-    const report: Report = {
-      id: randomUUID(),
+    const id = randomUUID();
+    const rep: Report = {
+      id,
       userId,
       category: r.category,
       details: r.details,
@@ -337,15 +298,17 @@ export class MemStorage implements IStorage {
       status: "pending",
       createdAt: new Date(),
     };
-    this.reports.set(report.id, report);
-    return report;
+    this.reports.set(id, rep);
+    console.log(`MemStorage: Created report ${id} for user ${userId}`);
+    return rep;
   }
 
   async updateReportStatus(id: string, status: string): Promise<Report | undefined> {
-    const rpt = this.reports.get(id);
-    if (!rpt) return undefined;
-    const updated = { ...rpt, status };
+    const rep = this.reports.get(id);
+    if (!rep) return undefined;
+    const updated = { ...rep, status };
     this.reports.set(id, updated);
+    console.log(`MemStorage: Updated report ${id} status to ${status}`);
     return updated;
   }
 
@@ -354,11 +317,8 @@ export class MemStorage implements IStorage {
   }
 
   async updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings> {
-    this.systemSettings = {
-      ...this.systemSettings,
-      ...settings,
-      maintenanceUntil: settings.maintenanceUntil ? new Date(settings.maintenanceUntil) : this.systemSettings.maintenanceUntil,
-    };
+    this.systemSettings = { ...this.systemSettings, ...settings };
+    console.log(`MemStorage: Updated system settings`);
     return this.systemSettings;
   }
 }
