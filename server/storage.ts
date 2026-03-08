@@ -13,8 +13,10 @@ import { getFirestore } from "firebase-admin/firestore";
 let db: any = null;
 if (!getApps().length) {
   try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      let saContent = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+    console.log(`[Firebase Init] FIREBASE_SERVICE_ACCOUNT env var: ${serviceAccountJson ? "SET" : "NOT SET"}`);
+    if (serviceAccountJson) {
+      let saContent = serviceAccountJson.trim();
       if ((saContent.startsWith("'") && saContent.endsWith("'")) || 
           (saContent.startsWith('"') && saContent.endsWith('"'))) {
         saContent = saContent.slice(1, -1);
