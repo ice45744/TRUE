@@ -5,9 +5,10 @@ A Thai school student digital system for managing goodness activities, stamp col
 
 ## Architecture
 - **Frontend**: React + TypeScript + Tailwind CSS + shadcn/ui, Thai language (Sarabun font)
-- **Backend**: Express.js with in-memory storage
-- **Auth**: localStorage-based client auth with role-based access (student/admin)
+- **Backend**: Express.js with in-memory storage (MemStorage)
+- **Auth**: localStorage-based client auth + backend session (no Firebase)
 - **Routing**: wouter for client-side routing
+- **Data Persistence**: In-memory only (data resets on server restart)
 
 ## Features
 1. **Authentication** - Login/Register with student ID and password
@@ -113,4 +114,14 @@ A Thai school student digital system for managing goodness activities, stamp col
 
 ## Vercel Deployment
 - `vercel.json` configured for Express + static frontend deployment
-- In-memory storage (data resets on server restart for demo)
+- In-memory storage (data resets on server restart)
+- Build command: `npm run build` creates production bundle in `dist/`
+- Run command: `node ./dist/index.cjs`
+
+## Recent Changes (Turn 9)
+- **Removed Firebase completely** from both frontend and backend
+- Deleted files: `client/src/lib/firebase.ts`, `client/src/lib/firebaseUtils.ts`, `client/src/hooks/useFirestore.ts`
+- `server/storage.ts`: Removed all Firebase Admin SDK initialization, imports, and sync code
+- App now uses pure in-memory MemStorage backend
+- Data persists only during runtime; resets on server restart
+- All authentication via backend API (no Firebase Auth)
