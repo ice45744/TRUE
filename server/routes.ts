@@ -329,5 +329,15 @@ export async function registerRoutes(
     });
   });
 
+  app.delete("/api/admin/clear-all", requireAdmin, async (_req, res) => {
+    try {
+      await storage.clearAllData();
+      res.json({ message: "ลบข้อมูลทั้งหมดเรียบร้อย" });
+    } catch (error: any) {
+      log(`Error clearing all data: ${error.message}`);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

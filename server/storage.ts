@@ -6,6 +6,38 @@ import {
   type SystemSettings, type InsertSystemSettings,
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+
+// Initialize Firebase Admin
+let db: any = null;
+if (!getApps().length) {
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      let saContent = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+      if ((saContent.startsWith("'") && saContent.endsWith("'")) || 
+          (saContent.startsWith('"') && saContent.endsWith('"'))) {
+        saContent = saContent.slice(1, -1);
+      }
+      const serviceAccount = JSON.parse(saContent);
+      if (serviceAccount.private_key) {
+        let key = serviceAccount.private_key;
+        if (typeof key === 'string') {
+          key = key.replace(/\\n/g, '\n');
+        }
+      }
+      if (serviceAccount.project_id && serviceAccount.private_key) {
+        initializeApp({ credential: cert(serviceAccount) });
+        db = getFirestore();
+        console.log("✓ Firebase Admin SDK initialized successfully");
+      }
+    } else {
+      console.log("ℹ Firebase service account not configured");
+    }
+  } catch (e) {
+    console.error("Firebase initialization warning:", e);
+  }
+}
 
 export interface QrToken {
   token: string;
@@ -317,6 +349,37 @@ export class MemStorage implements IStorage {
     this.systemSettings = { ...this.systemSettings, ...settings };
     console.log(`MemStorage: Updated system settings`);
     return this.systemSettings;
+  }
+
+  async clearAllData(): Promise<void> {
+    // Clear in-memory
+    this.users.clear();
+    this.announcements.clear();
+    this.activities.clear();
+    this.reports.clear();
+    this.qrTokens.clear();
+    console.log("MemStorage: Cleared all in-memory data");
+
+    // Clear from Firebase
+    if (db) {
+      try {
+        const collections = ["users", "announcements", "activities", "reports"];
+        for (const collectionName of collections) {
+          const snapshot = await db.collection(collectionName).get();
+          const batch = db.batch();
+          snapshot.docs.forEach((doc: any) => {
+            batch.delete(doc.ref);
+          });
+          if (snapshot.size > 0) {
+            await batch.commit();
+            console.log(`Firebase: Deleted ${snapshot.size} documents from ${collectionName}`);
+          }
+        }
+        console.log("Firebase: Cleared all collections");
+      } catch (e) {
+        console.error("Firebase Sync Error:", e);
+      }
+    }
   }
 }
 
