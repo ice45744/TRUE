@@ -4,40 +4,11 @@ import {
   type Activity, type InsertActivity,
   type Report, type InsertReport,
   type SystemSettings, type InsertSystemSettings,
+  users, announcements, activities, reports, systemSettings,
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-
-// Initialize Firebase Admin
-let db: any = null;
-if (!getApps().length) {
-  try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      let saContent = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
-      if ((saContent.startsWith("'") && saContent.endsWith("'")) || 
-          (saContent.startsWith('"') && saContent.endsWith('"'))) {
-        saContent = saContent.slice(1, -1);
-      }
-      const serviceAccount = JSON.parse(saContent);
-      if (serviceAccount.private_key) {
-        let key = serviceAccount.private_key;
-        if (typeof key === 'string') {
-          key = key.replace(/\\n/g, '\n');
-        }
-      }
-      if (serviceAccount.project_id && serviceAccount.private_key) {
-        initializeApp({ credential: cert(serviceAccount) });
-        db = getFirestore();
-        console.log("✓ Firebase Admin SDK initialized successfully");
-      }
-    } else {
-      console.log("ℹ Firebase service account not configured");
-    }
-  } catch (e) {
-    console.error("Firebase initialization warning:", e);
-  }
-}
+import { db } from "./db.js";
+import { eq, desc } from "drizzle-orm";
 
 export interface QrToken {
   token: string;
@@ -79,56 +50,33 @@ export interface IStorage {
 
   getSystemSettings(): Promise<SystemSettings>;
   updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings>;
+
+  clearAllData(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User> = new Map();
-  private announcements: Map<string, Announcement> = new Map();
-  private activities: Map<string, Activity> = new Map();
-  private reports: Map<string, Report> = new Map();
+export class PgStorage implements IStorage {
+  // QR tokens stay in-memory (ephemeral by design)
   private qrTokens: Map<string, QrToken> = new Map();
-  private systemSettings: SystemSettings = {
-    id: "default",
-    maintenanceMode: 0,
-    maintenanceMessage: "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
-    maintenanceUntil: null,
-  };
-
-  constructor() {
-    // Mock database seeding disabled
-    // this.seed();
-  }
 
   async getUser(id: string): Promise<User | undefined> {
-    const mem = this.users.get(id);
-    if (mem) {
-      console.log(`MemStorage: Found user ${id} in memory`);
-      return mem;
-    }
-    console.log(`MemStorage: User ${id} not found in memory`);
-    return undefined;
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByStudentId(studentId: string): Promise<User | undefined> {
-    for (const user of this.users.values()) {
-      if (user.studentId === studentId) {
-        console.log(`MemStorage: Found user by studentId ${studentId}`);
-        return user;
-      }
-    }
-    console.log(`MemStorage: User with studentId ${studentId} not found`);
-    return undefined;
+    const [user] = await db.select().from(users).where(eq(users.studentId, studentId));
+    return user;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return db.select().from(users);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
     const isAdmin = insertUser.schoolCode === ADMIN_CODE;
-    const user: User = {
+    const [user] = await db.insert(users).values({
       id,
       studentId: insertUser.studentId,
       name: insertUser.name,
@@ -138,27 +86,22 @@ export class MemStorage implements IStorage {
       merits: 0,
       trashPoints: 0,
       stamps: 0,
-    };
-
-    this.users.set(id, user);
-    console.log(`MemStorage: Created user ${id} (studentId: ${insertUser.studentId}, role: ${user.role})`);
+    }).returning();
     return user;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const deleted = this.users.delete(id);
-    if (deleted) {
-      console.log(`MemStorage: Deleted user ${id}`);
-    }
-    return deleted;
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
   }
 
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {
     const user = await this.getUser(id);
     if (!user) return undefined;
-    const updated = { ...user, merits: user.merits + amount };
-    this.users.set(id, updated);
-    console.log(`MemStorage: Updated merits for user ${id}: ${updated.merits}`);
+    const [updated] = await db.update(users)
+      .set({ merits: user.merits + amount })
+      .where(eq(users.id, id))
+      .returning();
     return updated;
   }
 
@@ -169,54 +112,46 @@ export class MemStorage implements IStorage {
     const oldStampsFromTrash = Math.floor(user.trashPoints / 10);
     const newStampsFromTrash = Math.floor(newTrash / 10);
     const stampGain = newStampsFromTrash - oldStampsFromTrash;
-    const updated = {
-      ...user,
-      trashPoints: newTrash,
-      stamps: user.stamps + stampGain,
-    };
-    this.users.set(id, updated);
-    console.log(`MemStorage: Updated trash/stamps for user ${id}: trash=${updated.trashPoints}, stamps=${updated.stamps}`);
+    const [updated] = await db.update(users)
+      .set({ trashPoints: newTrash, stamps: user.stamps + stampGain })
+      .where(eq(users.id, id))
+      .returning();
     return updated;
   }
 
   async updateUserStamps(id: string, amount: number): Promise<User | undefined> {
     const user = await this.getUser(id);
     if (!user) return undefined;
-    const updated = { ...user, stamps: user.stamps + amount };
-    this.users.set(id, updated);
-    console.log(`MemStorage: Updated stamps for user ${id}: ${updated.stamps}`);
+    const [updated] = await db.update(users)
+      .set({ stamps: user.stamps + amount })
+      .where(eq(users.id, id))
+      .returning();
     return updated;
   }
 
   async getAnnouncements(): Promise<Announcement[]> {
-    return Array.from(this.announcements.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(announcements).orderBy(desc(announcements.createdAt));
   }
 
   async getAnnouncement(id: string): Promise<Announcement | undefined> {
-    return this.announcements.get(id);
+    const [ann] = await db.select().from(announcements).where(eq(announcements.id, id));
+    return ann;
   }
 
   async createAnnouncement(a: InsertAnnouncement): Promise<Announcement> {
     const id = randomUUID();
-    const ann: Announcement = {
+    const [ann] = await db.insert(announcements).values({
       id,
       title: a.title,
       content: a.content,
       authorName: a.authorName ?? "สภานักเรียน",
-      createdAt: new Date(),
-    };
-    this.announcements.set(id, ann);
-    console.log(`MemStorage: Created announcement ${id}`);
+    }).returning();
     return ann;
   }
 
   async deleteAnnouncement(id: string): Promise<boolean> {
-    const deleted = this.announcements.delete(id);
-    if (deleted) {
-      console.log(`MemStorage: Deleted announcement ${id}`);
-    }
-    return deleted;
+    const result = await db.delete(announcements).where(eq(announcements.id, id)).returning();
+    return result.length > 0;
   }
 
   async getQrToken(token: string): Promise<QrToken | undefined> {
@@ -232,20 +167,16 @@ export class MemStorage implements IStorage {
     if (type === "checkin") {
       const existing = await this.getCheckinQr();
       if (existing) return existing;
-      
       const token = `st-checkin-${randomUUID().slice(0, 8)}`;
       const qr: QrToken = { token, type, createdAt: new Date(), expiresAt: null, usedBy: new Set() };
       this.qrTokens.set(token, qr);
-      console.log(`MemStorage: Created checkin QR token: ${token}`);
       return qr;
     }
-
     const token = `st-stamp-${randomUUID().slice(0, 8)}`;
     const mins = expiryMinutes ?? 5;
     const expiresAt = new Date(Date.now() + mins * 60 * 1000);
     const qr: QrToken = { token, type, createdAt: new Date(), expiresAt, usedBy: new Set() };
     this.qrTokens.set(token, qr);
-    console.log(`MemStorage: Created stamp QR token: ${token} (expires in ${mins} mins)`);
     return qr;
   }
 
@@ -262,62 +193,54 @@ export class MemStorage implements IStorage {
     const qr = await this.getQrToken(token);
     if (!qr) return false;
     if (qr.usedBy.has(userId)) return false;
-    
     qr.usedBy.add(userId);
-    console.log(`MemStorage: Marked QR token ${token} as used by ${userId}`);
     return true;
   }
 
   async getActivities(userId: string): Promise<Activity[]> {
-    return Array.from(this.activities.values())
-      .filter(a => a.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(activities)
+      .where(eq(activities.userId, userId))
+      .orderBy(desc(activities.createdAt));
   }
 
   async getAllActivities(): Promise<Activity[]> {
-    return Array.from(this.activities.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(activities).orderBy(desc(activities.createdAt));
   }
 
   async createActivity(userId: string, a: InsertActivity): Promise<Activity> {
     const id = randomUUID();
-    const act: Activity = {
+    const [act] = await db.insert(activities).values({
       id,
       userId,
       type: a.type,
       description: a.description,
       imageUrl: a.imageUrl ?? null,
       status: "pending",
-      createdAt: new Date(),
-    };
-    this.activities.set(id, act);
-    console.log(`MemStorage: Created activity ${id} for user ${userId}`);
+    }).returning();
     return act;
   }
 
   async updateActivityStatus(id: string, status: string): Promise<Activity | undefined> {
-    const act = this.activities.get(id);
-    if (!act) return undefined;
-    const updated = { ...act, status };
-    this.activities.set(id, updated);
-    console.log(`MemStorage: Updated activity ${id} status to ${status}`);
+    const [updated] = await db.update(activities)
+      .set({ status })
+      .where(eq(activities.id, id))
+      .returning();
     return updated;
   }
 
   async getReports(userId: string): Promise<Report[]> {
-    return Array.from(this.reports.values())
-      .filter(r => r.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(reports)
+      .where(eq(reports.userId, userId))
+      .orderBy(desc(reports.createdAt));
   }
 
   async getAllReports(): Promise<Report[]> {
-    return Array.from(this.reports.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(reports).orderBy(desc(reports.createdAt));
   }
 
   async createReport(userId: string, r: InsertReport): Promise<Report> {
     const id = randomUUID();
-    const rep: Report = {
+    const [rep] = await db.insert(reports).values({
       id,
       userId,
       category: r.category,
@@ -325,62 +248,47 @@ export class MemStorage implements IStorage {
       imageUrl: r.imageUrl ?? null,
       imageLink: r.imageLink ?? null,
       status: "pending",
-      createdAt: new Date(),
-    };
-    this.reports.set(id, rep);
-    console.log(`MemStorage: Created report ${id} for user ${userId}`);
+    }).returning();
     return rep;
   }
 
   async updateReportStatus(id: string, status: string): Promise<Report | undefined> {
-    const rep = this.reports.get(id);
-    if (!rep) return undefined;
-    const updated = { ...rep, status };
-    this.reports.set(id, updated);
-    console.log(`MemStorage: Updated report ${id} status to ${status}`);
+    const [updated] = await db.update(reports)
+      .set({ status })
+      .where(eq(reports.id, id))
+      .returning();
     return updated;
   }
 
   async getSystemSettings(): Promise<SystemSettings> {
-    return this.systemSettings;
+    const [settings] = await db.select().from(systemSettings).where(eq(systemSettings.id, "default"));
+    if (settings) return settings;
+    const [created] = await db.insert(systemSettings).values({
+      id: "default",
+      maintenanceMode: 0,
+      maintenanceMessage: "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
+      maintenanceUntil: null,
+    }).returning();
+    return created;
   }
 
   async updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings> {
-    this.systemSettings = { ...this.systemSettings, ...settings };
-    console.log(`MemStorage: Updated system settings`);
-    return this.systemSettings;
+    const current = await this.getSystemSettings();
+    const [updated] = await db.update(systemSettings)
+      .set(settings)
+      .where(eq(systemSettings.id, current.id))
+      .returning();
+    return updated;
   }
 
   async clearAllData(): Promise<void> {
-    // Clear in-memory
-    this.users.clear();
-    this.announcements.clear();
-    this.activities.clear();
-    this.reports.clear();
+    await db.delete(activities);
+    await db.delete(reports);
+    await db.delete(announcements);
+    await db.delete(users);
     this.qrTokens.clear();
-    console.log("MemStorage: Cleared all in-memory data");
-
-    // Clear from Firebase
-    if (db) {
-      try {
-        const collections = ["users", "announcements", "activities", "reports"];
-        for (const collectionName of collections) {
-          const snapshot = await db.collection(collectionName).get();
-          const batch = db.batch();
-          snapshot.docs.forEach((doc: any) => {
-            batch.delete(doc.ref);
-          });
-          if (snapshot.size > 0) {
-            await batch.commit();
-            console.log(`Firebase: Deleted ${snapshot.size} documents from ${collectionName}`);
-          }
-        }
-        console.log("Firebase: Cleared all collections");
-      } catch (e) {
-        console.error("Firebase Sync Error:", e);
-      }
-    }
+    console.log("PgStorage: Cleared all data from PostgreSQL");
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new PgStorage();
