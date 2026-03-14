@@ -49,5 +49,6 @@ expertMode = true
 [userenv]
 
 [userenv.shared]
+NEON_DATABASE_URL = "postgresql://neondb_owner:npg_BGta6oIcrVn1@ep-old-haze-a1quml6z-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 [userenv.production]
