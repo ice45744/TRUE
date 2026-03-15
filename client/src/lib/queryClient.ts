@@ -61,7 +61,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const url = queryKey[0] === "" ? queryKey.join("/") : "/" + queryKey.join("/");
+    const [first, ...rest] = queryKey as string[];
+    const url = first.startsWith("/")
+      ? rest.length > 0 ? `${first}/${rest.join("/")}` : first
+      : "/" + [first, ...rest].join("/");
     const res = await fetch(url, {
       headers: await buildHeaders(),
       credentials: "include",
