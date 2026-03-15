@@ -17,7 +17,6 @@ async function buildHeaders(data?: unknown): Promise<Record<string, string>> {
   const userId = getAuthUserId();
   if (userId) {
     headers["x-user-id"] = userId;
-    headers["X-User-Id"] = userId;
   }
   return headers;
 }
