@@ -43,6 +43,7 @@ function MaintenanceOverlay() {
   }, [settings?.maintenanceUntil]);
 
   if (!settings || settings.maintenanceMode === 0 || isAdmin) return null;
+  if (!settings.maintenanceUntil) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">

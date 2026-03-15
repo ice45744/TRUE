@@ -90,6 +90,14 @@ export default function AdminDashboard() {
   });
 
   const toggleMaintenance = (checked: boolean) => {
+    if (checked && !mUntil) {
+      toast({
+        title: "ต้องตั้งเวลาก่อน",
+        description: "กรุณากรอกวันและเวลาที่คาดว่าจะเสร็จก่อนเปิดโหมดปรับปรุง",
+        variant: "destructive"
+      });
+      return;
+    }
     const newMode = checked ? 1 : 0;
     updateSettings.mutate({ 
       maintenanceMode: newMode,
@@ -188,7 +196,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
-              เวลาที่คาดว่าจะเสร็จ (เลือกได้)
+              เวลาที่คาดว่าจะเสร็จ (จำเป็นต้องกรอกก่อนเปิด)
             </label>
             <div className="flex gap-2">
               <Input 
