@@ -3,10 +3,11 @@ import { Link } from "wouter";
 import { Users, ArrowLeft, Trash2, Award, Recycle, Search, ShieldCheck, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface SafeUser {
   id: string;
@@ -21,10 +22,23 @@ interface SafeUser {
 export default function AdminUsers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user: currentUser, updateUser } = useAuth();
   const [search, setSearch] = useState("");
   const [showTrashForm, setShowTrashForm] = useState(false);
   const [trashStudentId, setTrashStudentId] = useState("");
   const [trashAmount, setTrashAmount] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const trashMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/admin/trash-points", {
@@ -34,6 +48,9 @@ export default function AdminUsers() {
     onSuccess: async (res) => {
       const data = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      if (currentUser && data.user && data.user.id === currentUser.id) {
+        updateUser(data.user);
+      }
       toast({ title: "สำเร็จ!", description: data.message });
       setTrashStudentId(""); setTrashAmount(""); setShowTrashForm(false);
     },
@@ -119,17 +136,54 @@ export default function AdminUsers() {
               <Recycle size={14} className="text-green-500" />
               เพิ่มแต้มขยะ Manual
             </h3>
-            <button onClick={() => setShowTrashForm(false)} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => { setShowTrashForm(false); setShowSuggestions(false); }} className="text-gray-400 hover:text-gray-600">
               <X size={16} />
             </button>
           </div>
           <div className="space-y-2">
-            <Input
-              data-testid="input-trash-student-id"
-              placeholder="รหัสนักเรียน เช่น 12345"
-              className="rounded-xl h-10 text-sm"
-              value={trashStudentId}
-              onChange={e => setTrashStudentId(e.target.value)} />
+            <div className="relative" ref={suggestRef}>
+              <Input
+                data-testid="input-trash-student-id"
+                placeholder="พิมพ์รหัสหรือชื่อนักเรียน..."
+                className="rounded-xl h-10 text-sm"
+                value={trashStudentId}
+                autoComplete="off"
+                onChange={e => {
+                  setTrashStudentId(e.target.value);
+                  setShowSuggestions(e.target.value.length > 0);
+                }}
+                onFocus={() => trashStudentId.length > 0 && setShowSuggestions(true)} />
+              {showSuggestions && (() => {
+                const term = trashStudentId.toLowerCase();
+                const matches = (allUsers ?? []).filter(u =>
+                  u.studentId.includes(term) || u.name.toLowerCase().includes(term)
+                ).slice(0, 5);
+                return matches.length > 0 ? (
+                  <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                    {matches.map(u => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0"
+                        onMouseDown={() => {
+                          setTrashStudentId(u.studentId);
+                          setShowSuggestions(false);
+                        }}>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          u.role === "admin" ? "bg-purple-100 text-purple-600" : "bg-green-100 text-green-600"
+                        }`}>
+                          {u.name[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
+                          <p className="text-xs text-gray-400">รหัส: {u.studentId} · แต้มขยะ: {u.trashPoints}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+            </div>
             <Input
               data-testid="input-trash-amount"
               type="number"

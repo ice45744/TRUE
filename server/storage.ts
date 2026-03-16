@@ -390,7 +390,7 @@ export class DbStorage implements IStorage {
     if (!reward) return { ok: false, message: "ไม่พบของรางวัล" };
 
     if (reward.stock === 0) return { ok: false, message: "ของรางวัลหมดแล้ว" };
-    if (user.stamps < reward.stampCost) return { ok: false, message: `แสตมป์ไม่พอ (ต้องการ ${reward.stampCost} แสตมป์)` };
+    if (user.trashPoints < reward.stampCost) return { ok: false, message: `แต้มขยะไม่พอ (ต้องการ ${reward.stampCost} แต้มขยะ)` };
 
     const id = randomUUID();
     const [red] = await db.insert(redemptions).values({
@@ -405,7 +405,7 @@ export class DbStorage implements IStorage {
     }
 
     const [updatedUser] = await db.update(users)
-      .set({ stamps: user.stamps - reward.stampCost })
+      .set({ trashPoints: user.trashPoints - reward.stampCost })
       .where(eq(users.id, userId))
       .returning();
 

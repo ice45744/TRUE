@@ -80,7 +80,7 @@ export default function AdminRewards() {
 
   const handleCreate = () => {
     if (!title || !stampCost) {
-      toast({ title: "กรุณากรอกชื่อและจำนวนแสตมป์", variant: "destructive" });
+      toast({ title: "กรุณากรอกชื่อและจำนวนแต้มขยะ", variant: "destructive" });
       return;
     }
     createMutation.mutate();
@@ -134,12 +134,12 @@ export default function AdminRewards() {
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-xs text-gray-500 mb-1 block">แสตมป์ที่ต้องใช้ *</label>
+                <label className="text-xs text-gray-500 mb-1 block">แต้มขยะที่ต้องใช้ *</label>
                 <Input
                   data-testid="input-reward-stamp-cost"
                   type="number"
                   min="1"
-                  placeholder="จำนวนแสตมป์"
+                  placeholder="จำนวนแต้มขยะ"
                   className="rounded-xl h-10 text-sm"
                   value={stampCost}
                   onChange={e => setStampCost(e.target.value)} />
@@ -247,7 +247,7 @@ export default function AdminRewards() {
                 <p className="font-semibold text-gray-800 text-sm truncate">{r.title}</p>
                 {r.description && <p className="text-xs text-gray-400 truncate">{r.description}</p>}
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-purple-600 font-bold">★ {r.stampCost} แสตมป์</span>
+                  <span className="text-xs text-green-600 font-bold">♻ {r.stampCost} แต้มขยะ</span>
                   <span className="text-xs text-gray-400">
                     คลัง: {r.stock === -1 ? "ไม่จำกัด" : `${r.stock} ชิ้น`}
                   </span>

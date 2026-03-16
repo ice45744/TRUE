@@ -280,10 +280,10 @@ function RewardsTab() {
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in-up stagger-1" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-800 text-sm">แสตมป์ของฉัน</h3>
-          <span className="text-purple-600 font-bold text-lg">★ {user?.stamps ?? 0}</span>
+          <h3 className="font-bold text-gray-800 text-sm">แต้มขยะของฉัน</h3>
+          <span className="text-green-600 font-bold text-lg">♻ {user?.trashPoints ?? 0}</span>
         </div>
-        <p className="text-xs text-gray-400 mt-1">ใช้แสตมป์แลกรับของรางวัลด้านล่าง</p>
+        <p className="text-xs text-gray-400 mt-1">ใช้แต้มขยะแลกรับของรางวัลด้านล่าง</p>
       </div>
 
       {isLoading ? (
@@ -301,7 +301,7 @@ function RewardsTab() {
       ) : (
         <div className="space-y-3">
           {(rewards ?? []).map(r => {
-            const canRedeem = (user?.stamps ?? 0) >= r.stampCost && r.stock !== 0;
+            const canRedeem = (user?.trashPoints ?? 0) >= r.stampCost && r.stock !== 0;
             return (
               <div key={r.id}
                 data-testid={`reward-item-${r.id}`}
@@ -325,7 +325,7 @@ function RewardsTab() {
                     <p className="font-semibold text-gray-800 text-sm">{r.title}</p>
                     {r.description && <p className="text-xs text-gray-400 mt-0.5">{r.description}</p>}
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-purple-600 font-bold">★ {r.stampCost} แสตมป์</span>
+                      <span className="text-xs text-green-600 font-bold">♻ {r.stampCost} แต้มขยะ</span>
                       {r.stock >= 0 && (
                         <span className={`text-xs ${r.stock === 0 ? "text-red-400" : "text-gray-400"}`}>
                           {r.stock === 0 ? "หมดแล้ว" : `เหลือ ${r.stock} ชิ้น`}
@@ -344,11 +344,11 @@ function RewardsTab() {
                   disabled={!canRedeem || redeemMutation.isPending}
                   onClick={() => {
                     if (!canRedeem) return;
-                    if (confirm(`ยืนยันแลกรับ "${r.title}" ใช้ ${r.stampCost} แสตมป์?`)) {
+                    if (confirm(`ยืนยันแลกรับ "${r.title}" ใช้ ${r.stampCost} แต้มขยะ?`)) {
                       redeemMutation.mutate(r.id);
                     }
                   }}>
-                  {r.stock === 0 ? "หมดแล้ว" : !canRedeem ? `แสตมป์ไม่พอ (ต้องการ ${r.stampCost})` : "แลกรับ"}
+                  {r.stock === 0 ? "หมดแล้ว" : !canRedeem ? `แต้มขยะไม่พอ (ต้องการ ${r.stampCost})` : "แลกรับ"}
                 </Button>
               </div>
             );
