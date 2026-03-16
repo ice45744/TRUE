@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, ArrowLeft, Trash2, Award, Recycle, Search } from "lucide-react";
+import { Users, ArrowLeft, Trash2, Award, Recycle, Search, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ export default function AdminUsers() {
 
   const { data: users, isLoading, error } = useQuery<SafeUser[]>({
     queryKey: ["/api/admin/users"],
+    refetchInterval: 15000,
+    staleTime: 0,
   });
 
   const deleteMutation = useMutation({
@@ -61,10 +63,13 @@ export default function AdminUsers() {
     );
   }
 
-  const students = (users ?? []).filter(u => u.role === "student");
-  const filtered = students.filter(u =>
-    u.name.includes(search) || u.studentId.includes(search)
+  const allUsers = users ?? [];
+  const filtered = allUsers.filter(u =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    u.studentId.includes(search)
   );
+  const studentCount = allUsers.filter(u => u.role === "student").length;
+  const adminCount = allUsers.filter(u => u.role === "admin").length;
 
   return (
     <div className="pb-24 pt-5 px-4">
@@ -76,7 +81,19 @@ export default function AdminUsers() {
         </Link>
         <div className="flex items-center gap-2">
           <Users size={20} className="text-blue-500" />
-          <h1 className="text-xl font-bold text-gray-800">จัดการนักเรียน</h1>
+          <h1 className="text-xl font-bold text-gray-800">จัดการผู้ใช้งาน</h1>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="flex gap-2 mb-4">
+        <div className="flex-1 bg-blue-50 rounded-xl p-3 border border-blue-100 text-center">
+          <p className="text-xl font-bold text-blue-600">{studentCount}</p>
+          <p className="text-[10px] text-blue-500">นักเรียน</p>
+        </div>
+        <div className="flex-1 bg-purple-50 rounded-xl p-3 border border-purple-100 text-center">
+          <p className="text-xl font-bold text-purple-600">{adminCount}</p>
+          <p className="text-[10px] text-purple-500">ผู้ดูแล</p>
         </div>
       </div>
 
@@ -97,7 +114,7 @@ export default function AdminUsers() {
           {[1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-2xl" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">ไม่พบนักเรียน</div>
+        <div className="text-center py-12 text-gray-400 text-sm">ไม่พบผู้ใช้งาน</div>
       ) : (
         <div className="space-y-2">
           {filtered.map(u => (
@@ -105,11 +122,18 @@ export default function AdminUsers() {
               data-testid={`user-card-${u.id}`}
               className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center gap-3"
               style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">
-                {u.name[0]}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+                u.role === "admin" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+              }`}>
+                {u.role === "admin" ? <ShieldCheck size={18} /> : u.name[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm truncate">{u.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-800 text-sm truncate">{u.name}</p>
+                  {u.role === "admin" && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">ADMIN</span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400">รหัส: {u.studentId}</p>
                 <div className="flex items-center gap-3 mt-1">
                   <span className="flex items-center gap-1 text-xs text-yellow-600" title="แต้มความดี">

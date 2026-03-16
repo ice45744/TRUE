@@ -31,10 +31,14 @@ export default function AdminReports() {
 
   const { data: reports, isLoading, error } = useQuery<Report[]>({
     queryKey: ["/api/admin/reports"],
+    refetchInterval: 10000,
+    staleTime: 0,
   });
 
   const { data: users } = useQuery<SafeUser[]>({
     queryKey: ["/api/admin/users"],
+    refetchInterval: 15000,
+    staleTime: 0,
   });
 
   const userMap = new Map((users ?? []).map(u => [u.id, u]));
@@ -78,7 +82,6 @@ export default function AdminReports() {
 
   return (
     <div className="pb-24 pt-5 px-4">
-      {/* Image Modal */}
       {expandedImage && (
         <div 
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
@@ -142,7 +145,6 @@ export default function AdminReports() {
                 <span className="inline-block text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md mb-1.5">{rpt.category}</span>
                 <p className="text-sm text-gray-600 mb-2">{rpt.details}</p>
 
-                {/* รูปภาพประกอบ */}
                 {imageToShow && (
                   <div 
                     className="mb-3 rounded-xl overflow-hidden border border-gray-100 cursor-pointer"
@@ -154,7 +156,6 @@ export default function AdminReports() {
                       onError={(e) => {
                         const el = e.target as HTMLImageElement;
                         el.style.display = 'none';
-                        // Show link fallback
                         el.parentElement!.innerHTML = `<a href="${imageToShow}" target="_blank" class="flex items-center gap-1 p-2 text-xs text-blue-500 hover:underline"><span>🔗 ดูรูปภาพ</span></a>`;
                       }}
                     />

@@ -36,10 +36,14 @@ export default function AdminActivities() {
 
   const { data: activities, isLoading, error } = useQuery<Activity[]>({
     queryKey: ["/api/admin/activities"],
+    refetchInterval: 10000,
+    staleTime: 0,
   });
 
   const { data: users } = useQuery<SafeUser[]>({
     queryKey: ["/api/admin/users"],
+    refetchInterval: 15000,
+    staleTime: 0,
   });
 
   const userMap = new Map((users ?? []).map(u => [u.id, u]));
@@ -85,7 +89,6 @@ export default function AdminActivities() {
 
   return (
     <div className="pb-24 pt-5 px-4">
-      {/* Image Modal */}
       {expandedImage && (
         <div 
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
@@ -153,7 +156,6 @@ export default function AdminActivities() {
 
                 <p className="text-sm text-gray-600 mb-2">{act.description}</p>
 
-                {/* รูปภาพประกอบ */}
                 {act.imageUrl && (
                   <div 
                     className="mb-3 rounded-xl overflow-hidden border border-gray-100 cursor-pointer"
