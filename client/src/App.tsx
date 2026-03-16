@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 
 function MaintenanceOverlay() {
   const { isAdmin } = useAuth();
+  const [location] = useLocation();
   const { data: settings } = useQuery<SystemSettings>({
     queryKey: ["/api/system/settings"],
     refetchInterval: 10000,
@@ -44,6 +45,7 @@ function MaintenanceOverlay() {
 
   if (!settings || settings.maintenanceMode === 0 || isAdmin) return null;
   if (!settings.maintenanceUntil) return null;
+  if (location === "/auth") return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
@@ -74,6 +76,12 @@ function MaintenanceOverlay() {
           <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
         </div>
       </div>
+
+      <Link href="/auth">
+        <span className="mt-10 text-xs text-gray-300 hover:text-gray-400 transition-colors cursor-pointer underline underline-offset-2">
+          สำหรับเจ้าหน้าที่เท่านั้น
+        </span>
+      </Link>
     </div>
   );
 }
