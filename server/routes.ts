@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema } from "../shared/schema.js";
+import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema, insertSystemSettingsSchema } from "../shared/schema.js";
 import { log } from "./index.js";
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
@@ -67,12 +67,14 @@ export async function registerRoutes(
 
   app.patch("/api/system/settings", requireAdmin, async (req, res) => {
     try {
-      log(`PATCH /api/system/settings - Body: ${JSON.stringify(req.body)}`);
       if (Object.keys(req.body).length === 0) {
         return res.status(400).json({ message: "ไม่มีข้อมูลที่จะอัปเดต" });
       }
-      const settings = await storage.updateSystemSettings(req.body);
-      log(`Settings updated: ${JSON.stringify(settings)}`);
+      const result = insertSystemSettingsSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
+      }
+      const settings = await storage.updateSystemSettings(result.data);
       res.json(settings);
     } catch (error: any) {
       log(`Error updating settings: ${error.message}`);
