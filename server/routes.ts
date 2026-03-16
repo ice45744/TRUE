@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema, insertSystemSettingsSchema } from "../shared/schema.js";
+import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema, insertSystemSettingsSchema, insertRewardSchema } from "../shared/schema.js";
 import { log } from "./index.js";
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
@@ -310,6 +310,57 @@ export async function registerRoutes(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // Admin: เพิ่มแต้มขยะ Manual
+  app.post("/api/admin/trash-points", requireAdmin, async (req, res) => {
+    const { studentId, amount } = req.body;
+    if (!studentId || !amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return res.status(400).json({ message: "กรุณากรอกรหัสนักเรียนและจำนวนแต้มให้ถูกต้อง" });
+    }
+    const user = await storage.getUserByStudentId(studentId);
+    if (!user) return res.status(404).json({ message: "ไม่พบนักเรียนที่มีรหัสนี้" });
+    const updated = await storage.updateUserTrashPoints(user.id, Number(amount));
+    await storage.createActivity(user.id, { type: "stamp", description: `Admin เพิ่มแต้มขยะ +${amount} แต้ม (${Math.floor(Number(amount) / 10)} แสตมป์)` });
+    const { password: _, ...safeUser } = updated!;
+    res.json({ message: `เพิ่ม ${amount} แต้มขยะให้ ${user.name} สำเร็จ`, user: safeUser });
+  });
+
+  // Rewards - ของรางวัล
+  app.get("/api/rewards", async (_req, res) => {
+    const list = await storage.getRewards();
+    res.json(list);
+  });
+
+  app.post("/api/rewards", requireAdmin, async (req, res) => {
+    const result = insertRewardSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
+    }
+    const reward = await storage.createReward(result.data);
+    res.json(reward);
+  });
+
+  app.delete("/api/rewards/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteReward(req.params.id);
+    if (!ok) return res.status(404).json({ message: "ไม่พบของรางวัล" });
+    res.json({ message: "ลบของรางวัลสำเร็จ" });
+  });
+
+  app.post("/api/rewards/:id/redeem", async (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ" });
+    const result = await storage.createRedemption(userId, req.params.id);
+    if (!result.ok) return res.status(400).json({ message: result.message });
+    const { password: _, ...safeUser } = result.user!;
+    res.json({ message: result.message, user: safeUser, redemption: result.redemption });
+  });
+
+  app.get("/api/redemptions", async (req, res) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ" });
+    const list = await storage.getRedemptions(userId);
+    res.json(list);
   });
 
   return httpServer;

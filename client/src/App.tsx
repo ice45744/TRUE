@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings } from "lucide-react";
+import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings, Gift } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SystemSettings } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -113,6 +113,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminActivities from "@/pages/admin/AdminActivities";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminReports from "@/pages/admin/AdminReports";
+import AdminRewards from "@/pages/admin/AdminRewards";
 
 function NotFound() {
   return (
@@ -182,6 +183,7 @@ function AppShell() {
           <Route path="/admin/announcements" component={() => <AdminRoute component={AdminAnnouncements} />} />
           <Route path="/admin/reports" component={() => <AdminRoute component={AdminReports} />} />
           <Route path="/admin/qr" component={() => <AdminRoute component={QrGeneratorPage} />} />
+          <Route path="/admin/rewards" component={() => <AdminRoute component={AdminRewards} />} />
           <Route component={NotFound} />
         </Switch>
         {user && !isAuth && !isAdminPage && <StudentBottomNav />}
@@ -238,7 +240,7 @@ function AdminBottomNav() {
     { href: "/admin", label: "แดชบอร์ด", icon: LayoutDashboard },
     { href: "/admin/users", label: "นักเรียน", icon: Users },
     { href: "/admin/activities", label: "กิจกรรม", icon: ClipboardList },
-    { href: "/admin/announcements", label: "ประกาศ", icon: Megaphone },
+    { href: "/admin/rewards", label: "ของรางวัล", icon: Gift },
     { href: "/", label: "แอป", icon: Home },
   ];
 

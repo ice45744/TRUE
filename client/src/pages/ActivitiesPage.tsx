@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sun, QrCode, Cloud, CheckCircle } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Sun, QrCode, Cloud, CheckCircle, Gift, Package } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QrScanner } from "@/components/QrScanner";
+import { Reward } from "@shared/schema";
 
 const MAX_STAMPS = 10;
 
@@ -254,8 +255,104 @@ function StampTab() {
   );
 }
 
+function RewardsTab() {
+  const { user, updateUser } = useAuth();
+  const { toast } = useToast();
+
+  const { data: rewards, isLoading } = useQuery<Reward[]>({
+    queryKey: ["/api/rewards"],
+  });
+
+  const redeemMutation = useMutation({
+    mutationFn: (rewardId: string) => apiRequest("POST", `/api/rewards/${rewardId}/redeem`, {}),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      updateUser(data.user);
+      toast({ title: "แลกรับสำเร็จ!", description: data.message });
+    },
+    onError: (err: any) => {
+      toast({ title: "ไม่สำเร็จ", description: err.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in-up stagger-1" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-gray-800 text-sm">แสตมป์ของฉัน</h3>
+          <span className="text-purple-600 font-bold text-lg">★ {user?.stamps ?? 0}</span>
+        </div>
+        <p className="text-xs text-gray-400 mt-1">ใช้แสตมป์แลกรับของรางวัลด้านล่าง</p>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-white rounded-2xl h-20 animate-pulse border border-gray-100" />
+          ))}
+        </div>
+      ) : (rewards ?? []).length === 0 ? (
+        <div className="text-center py-16 text-gray-400 text-sm">
+          <Package size={40} className="mx-auto mb-3 text-gray-300" />
+          <p>ยังไม่มีของรางวัล</p>
+          <p className="text-xs mt-1">รอการเพิ่มของรางวัลจากสภานักเรียน</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {(rewards ?? []).map(r => {
+            const canRedeem = (user?.stamps ?? 0) >= r.stampCost && r.stock !== 0;
+            return (
+              <div key={r.id}
+                data-testid={`reward-item-${r.id}`}
+                className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in-up"
+                style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Gift size={18} className="text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">{r.title}</p>
+                    {r.description && <p className="text-xs text-gray-400 mt-0.5">{r.description}</p>}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-purple-600 font-bold">★ {r.stampCost} แสตมป์</span>
+                      {r.stock >= 0 && (
+                        <span className={`text-xs ${r.stock === 0 ? "text-red-400" : "text-gray-400"}`}>
+                          {r.stock === 0 ? "หมดแล้ว" : `เหลือ ${r.stock} ชิ้น`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  data-testid={`button-redeem-${r.id}`}
+                  className={`w-full mt-3 rounded-xl h-9 text-sm font-semibold ${
+                    canRedeem
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  }`}
+                  disabled={!canRedeem || redeemMutation.isPending}
+                  onClick={() => {
+                    if (!canRedeem) return;
+                    if (confirm(`ยืนยันแลกรับ "${r.title}" ใช้ ${r.stampCost} แสตมป์?`)) {
+                      redeemMutation.mutate(r.id);
+                    }
+                  }}>
+                  {r.stock === 0 ? "หมดแล้ว" : !canRedeem ? `แสตมป์ไม่พอ (ต้องการ ${r.stampCost})` : "แลกรับ"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ActivitiesPage() {
-  const [tab, setTab] = useState<"goodness" | "stamp">("goodness");
+  const [tab, setTab] = useState<"goodness" | "stamp" | "rewards">("goodness");
+
+  const tabIndex = tab === "goodness" ? 0 : tab === "stamp" ? 1 : 2;
 
   return (
     <div className="pb-24 px-4 pt-5">
@@ -265,12 +362,12 @@ export default function ActivitiesPage() {
       </div>
 
       <div className="flex bg-gray-100 rounded-xl p-1 mb-5 animate-fade-in-up stagger-1 relative">
-        <div className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm tab-indicator"
-          style={{ width: "calc(50% - 4px)", left: tab === "goodness" ? "4px" : "calc(50%)" }} />
+        <div className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm transition-all duration-300"
+          style={{ width: "calc(33.33% - 3px)", left: `calc(${tabIndex * 33.33}% + 4px)` }} />
         <button
           data-testid="tab-goodness"
           onClick={() => setTab("goodness")}
-          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors relative z-10 ${
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors relative z-10 ${
             tab === "goodness" ? "text-gray-800" : "text-gray-500"
           }`}>
           ความดี
@@ -278,15 +375,23 @@ export default function ActivitiesPage() {
         <button
           data-testid="tab-stamp"
           onClick={() => setTab("stamp")}
-          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors relative z-10 ${
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors relative z-10 ${
             tab === "stamp" ? "text-gray-800" : "text-gray-500"
           }`}>
           ธนาคารขยะ
         </button>
+        <button
+          data-testid="tab-rewards"
+          onClick={() => setTab("rewards")}
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors relative z-10 ${
+            tab === "rewards" ? "text-gray-800" : "text-gray-500"
+          }`}>
+          ของรางวัล
+        </button>
       </div>
 
       <div key={tab} className="animate-fade-in">
-        {tab === "goodness" ? <GoodnesTab /> : <StampTab />}
+        {tab === "goodness" ? <GoodnesTab /> : tab === "stamp" ? <StampTab /> : <RewardsTab />}
       </div>
     </div>
   );

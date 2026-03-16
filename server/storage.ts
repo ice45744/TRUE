@@ -4,7 +4,9 @@ import {
   type Activity, type InsertActivity,
   type Report, type InsertReport,
   type SystemSettings, type InsertSystemSettings,
-  users, announcements, activities, reports, systemSettings,
+  type Reward, type InsertReward,
+  type Redemption,
+  users, announcements, activities, reports, systemSettings, rewards, redemptions,
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
 import { db } from "./db.js";
@@ -53,6 +55,14 @@ export interface IStorage {
 
   getSystemSettings(): Promise<SystemSettings>;
   updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings>;
+
+  getRewards(): Promise<Reward[]>;
+  createReward(r: InsertReward): Promise<Reward>;
+  deleteReward(id: string): Promise<boolean>;
+  updateRewardStock(id: string, delta: number): Promise<Reward | undefined>;
+
+  getRedemptions(userId: string): Promise<Redemption[]>;
+  createRedemption(userId: string, rewardId: string): Promise<{ ok: boolean; message: string; user?: User; redemption?: Redemption }>;
 }
 
 const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
@@ -330,6 +340,76 @@ export class DbStorage implements IStorage {
       .where(eq(systemSettings.id, DEFAULT_SETTINGS_ID))
       .returning();
     return updated;
+  }
+
+  async getRewards(): Promise<Reward[]> {
+    const rows = await db.select().from(rewards);
+    return rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createReward(r: InsertReward): Promise<Reward> {
+    const id = randomUUID();
+    const [reward] = await db.insert(rewards).values({
+      id,
+      title: r.title,
+      description: r.description ?? "",
+      stampCost: r.stampCost,
+      stock: r.stock ?? -1,
+      imageUrl: r.imageUrl ?? null,
+    }).returning();
+    return reward;
+  }
+
+  async deleteReward(id: string): Promise<boolean> {
+    const result = await db.delete(rewards).where(eq(rewards.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateRewardStock(id: string, delta: number): Promise<Reward | undefined> {
+    const [reward] = await db.select().from(rewards).where(eq(rewards.id, id));
+    if (!reward) return undefined;
+    if (reward.stock === -1) return reward;
+    const newStock = reward.stock + delta;
+    const [updated] = await db.update(rewards)
+      .set({ stock: newStock })
+      .where(eq(rewards.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getRedemptions(userId: string): Promise<Redemption[]> {
+    const rows = await db.select().from(redemptions).where(eq(redemptions.userId, userId));
+    return rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createRedemption(userId: string, rewardId: string): Promise<{ ok: boolean; message: string; user?: User; redemption?: Redemption }> {
+    const user = await this.getUser(userId);
+    if (!user) return { ok: false, message: "ไม่พบผู้ใช้" };
+
+    const [reward] = await db.select().from(rewards).where(eq(rewards.id, rewardId));
+    if (!reward) return { ok: false, message: "ไม่พบของรางวัล" };
+
+    if (reward.stock === 0) return { ok: false, message: "ของรางวัลหมดแล้ว" };
+    if (user.stamps < reward.stampCost) return { ok: false, message: `แสตมป์ไม่พอ (ต้องการ ${reward.stampCost} แสตมป์)` };
+
+    const id = randomUUID();
+    const [red] = await db.insert(redemptions).values({
+      id,
+      userId,
+      rewardId,
+      rewardTitle: reward.title,
+    }).returning();
+
+    if (reward.stock > 0) {
+      await db.update(rewards).set({ stock: reward.stock - 1 }).where(eq(rewards.id, rewardId));
+    }
+
+    const [updatedUser] = await db.update(users)
+      .set({ stamps: user.stamps - reward.stampCost })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return { ok: true, message: `แลกรับ "${reward.title}" สำเร็จ!`, user: updatedUser, redemption: red };
   }
 }
 

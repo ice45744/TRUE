@@ -106,3 +106,33 @@ export const insertSystemSettingsSchema = createInsertSchema(systemSettings).ext
 
 export type SystemSettings = typeof systemSettings.$inferSelect;
 export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
+
+export const rewards = pgTable("rewards", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  stampCost: integer("stamp_cost").notNull(),
+  stock: integer("stock").notNull().default(-1),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const redemptions = pgTable("redemptions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: varchar("user_id", { length: 36 }).notNull(),
+  rewardId: varchar("reward_id", { length: 36 }).notNull(),
+  rewardTitle: text("reward_title").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertRewardSchema = createInsertSchema(rewards).pick({
+  title: true,
+  description: true,
+  stampCost: true,
+  stock: true,
+  imageUrl: true,
+});
+
+export type Reward = typeof rewards.$inferSelect;
+export type InsertReward = z.infer<typeof insertRewardSchema>;
+export type Redemption = typeof redemptions.$inferSelect;

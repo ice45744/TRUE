@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, ArrowLeft, Trash2, Award, Recycle, Search, ShieldCheck } from "lucide-react";
+import { Users, ArrowLeft, Trash2, Award, Recycle, Search, ShieldCheck, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,25 @@ export default function AdminUsers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [showTrashForm, setShowTrashForm] = useState(false);
+  const [trashStudentId, setTrashStudentId] = useState("");
+  const [trashAmount, setTrashAmount] = useState("");
+
+  const trashMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/trash-points", {
+      studentId: trashStudentId,
+      amount: Number(trashAmount),
+    }),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "สำเร็จ!", description: data.message });
+      setTrashStudentId(""); setTrashAmount(""); setShowTrashForm(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "เกิดข้อผิดพลาด", description: err.message, variant: "destructive" });
+    },
+  });
 
   const { data: users, isLoading, error } = useQuery<SafeUser[]>({
     queryKey: ["/api/admin/users"],
@@ -83,7 +102,59 @@ export default function AdminUsers() {
           <Users size={20} className="text-blue-500" />
           <h1 className="text-xl font-bold text-gray-800">จัดการผู้ใช้งาน</h1>
         </div>
+        <Button
+          data-testid="button-toggle-trash-form"
+          size="sm"
+          className="ml-auto rounded-xl text-xs bg-green-600 hover:bg-green-700"
+          onClick={() => setShowTrashForm(v => !v)}>
+          <Recycle size={14} className="mr-1" />
+          เพิ่มแต้มขยะ
+        </Button>
       </div>
+
+      {showTrashForm && (
+        <div className="bg-white rounded-2xl p-4 border border-green-100 mb-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+              <Recycle size={14} className="text-green-500" />
+              เพิ่มแต้มขยะ Manual
+            </h3>
+            <button onClick={() => setShowTrashForm(false)} className="text-gray-400 hover:text-gray-600">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="space-y-2">
+            <Input
+              data-testid="input-trash-student-id"
+              placeholder="รหัสนักเรียน เช่น 12345"
+              className="rounded-xl h-10 text-sm"
+              value={trashStudentId}
+              onChange={e => setTrashStudentId(e.target.value)} />
+            <Input
+              data-testid="input-trash-amount"
+              type="number"
+              min="10"
+              step="10"
+              placeholder="จำนวนแต้มขยะ (10 แต้ม = 1 แสตมป์)"
+              className="rounded-xl h-10 text-sm"
+              value={trashAmount}
+              onChange={e => setTrashAmount(e.target.value)} />
+            <Button
+              data-testid="button-add-trash-points"
+              className="w-full rounded-xl h-10 text-sm bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                if (!trashStudentId || !trashAmount) {
+                  toast({ title: "กรุณากรอกข้อมูลให้ครบ", variant: "destructive" });
+                  return;
+                }
+                trashMutation.mutate();
+              }}
+              disabled={trashMutation.isPending}>
+              {trashMutation.isPending ? "กำลังบันทึก..." : "เพิ่มแต้มขยะ"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Summary */}
       <div className="flex gap-2 mb-4">
