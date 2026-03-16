@@ -91,6 +91,8 @@ export default function AdminDashboard() {
     },
   });
 
+  const toUTCIso = (localStr: string) => new Date(localStr).toISOString();
+
   const toggleMaintenance = (checked: boolean) => {
     if (checked && !mUntil) {
       toast({
@@ -104,14 +106,14 @@ export default function AdminDashboard() {
     updateSettings.mutate({ 
       maintenanceMode: newMode,
       maintenanceMessage: mMessage || undefined,
-      maintenanceUntil: checked && mUntil ? mUntil : null
+      maintenanceUntil: checked && mUntil ? toUTCIso(mUntil) : null
     } as any);
   };
 
   const handleSaveSettings = () => {
     updateSettings.mutate({
       maintenanceMessage: mMessage,
-      maintenanceUntil: mUntil ? mUntil : null
+      maintenanceUntil: mUntil ? toUTCIso(mUntil) : null
     } as any);
   };
 

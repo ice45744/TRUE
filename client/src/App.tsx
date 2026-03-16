@@ -11,13 +11,30 @@ import { useState, useEffect } from "react";
 
 function MaintenanceOverlay() {
   const { isAdmin } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { data: settings } = useQuery<SystemSettings>({
     queryKey: ["/api/system/settings"],
     refetchInterval: 10000,
   });
 
   const [timeLeft, setTimeLeft] = useState<string>("");
+  const [showAdminBox, setShowAdminBox] = useState(false);
+  const [adminCode, setAdminCode] = useState("");
+  const [codeError, setCodeError] = useState(false);
+
+  const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
+
+  const handleAdminCodeSubmit = () => {
+    if (adminCode === ADMIN_CODE) {
+      setShowAdminBox(false);
+      setAdminCode("");
+      setCodeError(false);
+      setLocation("/auth");
+    } else {
+      setCodeError(true);
+      setAdminCode("");
+    }
+  };
 
   useEffect(() => {
     if (!settings?.maintenanceUntil) return;
