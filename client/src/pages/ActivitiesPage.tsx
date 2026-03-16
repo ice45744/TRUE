@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sun, QrCode, Gift, Cloud, Sparkles, CheckCircle } from "lucide-react";
+import { Sun, QrCode, Cloud, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -11,13 +11,6 @@ import { Label } from "@/components/ui/label";
 import { QrScanner } from "@/components/QrScanner";
 
 const MAX_STAMPS = 10;
-
-const rewards = [
-  { name: "น้ำดื่ม 1 ขวด", stamps: 10, icon: "🥤" },
-  { name: "สมุดโน้ต 1 เล่ม", stamps: 20, icon: "📓" },
-  { name: "ปากกา 1 แท่ง", stamps: 15, icon: "✏️" },
-  { name: "ถุงผ้า 1 ใบ", stamps: 25, icon: "👜" },
-];
 
 function GoodnesTab() {
   const { user, updateUser } = useAuth();
@@ -257,25 +250,6 @@ function StampTab() {
         </Button>
       </div>
 
-      <div className="animate-fade-in-up stagger-2">
-        <div className="flex items-center gap-2 mb-3">
-          <Gift size={18} className="text-pink-500" />
-          <h3 className="font-bold text-gray-800 text-sm">ของรางวัลที่แลกได้</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {rewards.map(({ name, stamps, icon }, i) => (
-            <div key={name}
-              className={`bg-white rounded-2xl p-4 flex flex-col items-center gap-2 border border-gray-100 card-interactive hover-elevate animate-fade-in-up stagger-${Math.min(i + 1, 4)}`}
-              style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <div className="w-12 h-12 rounded-full bg-pink-50 flex items-center justify-center text-2xl">
-                <span role="img" aria-label={name}>{icon}</span>
-              </div>
-              <p className="text-xs font-semibold text-gray-700 text-center">{name}</p>
-              <p className="text-xs text-green-500 font-bold">ใช้ {stamps} แสตมป์</p>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

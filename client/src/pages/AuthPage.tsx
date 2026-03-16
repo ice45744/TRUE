@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { TrendingUp, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -77,13 +76,6 @@ export default function AuthPage() {
 
       <div className="w-full max-w-sm relative z-10">
         <div className="flex flex-col items-center mb-8 animate-fade-in-up">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 animate-bounce-in relative"
-            style={{ background: "linear-gradient(135deg, #4F8EF7 0%, #2563EB 100%)", boxShadow: "0 8px 24px rgba(37,99,235,0.35)" }}>
-            <TrendingUp size={38} className="text-white" strokeWidth={2.5} />
-            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center animate-pop-in stagger-3">
-              <Sparkles size={10} className="text-white" />
-            </div>
-          </div>
           <h1 className="text-2xl font-bold text-gray-800 tracking-tight">S.T.ก้าวหน้า</h1>
           <p className="text-sm text-gray-500 mt-1">ระบบดิจิทัล สภานักเรียน</p>
         </div>
