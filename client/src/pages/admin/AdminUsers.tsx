@@ -23,7 +23,7 @@ export default function AdminUsers() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
 
-  const { data: users, isLoading } = useQuery<SafeUser[]>({
+  const { data: users, isLoading, error } = useQuery<SafeUser[]>({
     queryKey: ["/api/admin/users"],
   });
 
@@ -38,6 +38,28 @@ export default function AdminUsers() {
       toast({ title: "เกิดข้อผิดพลาด", description: err.message, variant: "destructive" });
     },
   });
+
+  if (error) {
+    return (
+      <div className="pb-24 pt-5 px-4">
+        <div className="flex items-center gap-3 mb-5">
+          <Link href="/admin">
+            <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center cursor-pointer">
+              <ArrowLeft size={16} className="text-gray-500" />
+            </div>
+          </Link>
+          <h1 className="text-xl font-bold text-gray-800">จัดการนักเรียน</h1>
+        </div>
+        <div className="bg-red-50 rounded-2xl p-5 border border-red-100 text-center">
+          <p className="text-red-600 font-semibold text-sm mb-1">เซสชันหมดอายุ</p>
+          <p className="text-red-500 text-xs">กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่</p>
+          <Link href="/auth">
+            <Button size="sm" className="mt-3 rounded-xl text-xs bg-red-500 hover:bg-red-600">เข้าสู่ระบบใหม่</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const students = (users ?? []).filter(u => u.role === "student");
   const filtered = students.filter(u =>
@@ -106,6 +128,7 @@ export default function AdminUsers() {
                 size="icon"
                 variant="ghost"
                 className="text-red-400 flex-shrink-0"
+                disabled={deleteMutation.isPending}
                 onClick={() => {
                   if (confirm(`ยืนยันลบ ${u.name}?`)) deleteMutation.mutate(u.id);
                 }}>

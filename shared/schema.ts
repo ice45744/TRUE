@@ -19,6 +19,7 @@ export const announcements = pgTable("announcements", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   authorName: text("author_name").notNull().default("สภานักเรียน"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -59,6 +60,7 @@ export const insertAnnouncementSchema = createInsertSchema(announcements).pick({
   title: true,
   content: true,
   authorName: true,
+  imageUrl: true,
 });
 
 export const insertActivitySchema = createInsertSchema(activities).pick({
@@ -84,7 +86,7 @@ export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export const systemSettings = pgTable("system_settings", {
   id: varchar("id", { length: 36 }).primaryKey(),
-  maintenanceMode: integer("maintenance_mode").notNull().default(0), // 0: off, 1: on
+  maintenanceMode: integer("maintenance_mode").notNull().default(0),
   maintenanceMessage: text("maintenance_message").notNull().default("กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง"),
   maintenanceUntil: timestamp("maintenance_until"),
 });

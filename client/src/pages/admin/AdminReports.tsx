@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeft, AlertTriangle, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle, XCircle, Loader2, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -27,8 +27,9 @@ export default function AdminReports() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "resolved" | "rejected">("all");
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
-  const { data: reports, isLoading } = useQuery<Report[]>({
+  const { data: reports, isLoading, error } = useQuery<Report[]>({
     queryKey: ["/api/admin/reports"],
   });
 
@@ -46,12 +47,46 @@ export default function AdminReports() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "อัปเดตสถานะสำเร็จ" });
     },
+    onError: (err: any) => {
+      toast({ title: "เกิดข้อผิดพลาด", description: err.message, variant: "destructive" });
+    }
   });
 
   const filtered = (reports ?? []).filter(r => filter === "all" || r.status === filter);
 
+  if (error) {
+    return (
+      <div className="pb-24 pt-5 px-4">
+        <div className="flex items-center gap-3 mb-5">
+          <Link href="/admin">
+            <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center cursor-pointer">
+              <ArrowLeft size={16} className="text-gray-500" />
+            </div>
+          </Link>
+          <h1 className="text-xl font-bold text-gray-800">รายงานปัญหา</h1>
+        </div>
+        <div className="bg-red-50 rounded-2xl p-5 border border-red-100 text-center">
+          <p className="text-red-600 font-semibold text-sm mb-1">เซสชันหมดอายุ</p>
+          <p className="text-red-500 text-xs">กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่</p>
+          <Link href="/auth">
+            <Button size="sm" className="mt-3 rounded-xl text-xs bg-red-500 hover:bg-red-600">เข้าสู่ระบบใหม่</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-24 pt-5 px-4">
+      {/* Image Modal */}
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setExpandedImage(null)}>
+          <img src={expandedImage} alt="รูปประกอบ" className="max-w-full max-h-full rounded-2xl object-contain" />
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mb-5">
         <Link href="/admin">
           <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center cursor-pointer hover-elevate">
@@ -85,10 +120,11 @@ export default function AdminReports() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm">ไม่มีรายงาน</div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filtered.map(rpt => {
             const u = userMap.get(rpt.userId);
             const st = statusMap[rpt.status] ?? statusMap.pending;
+            const imageToShow = rpt.imageUrl || rpt.imageLink;
             return (
               <div key={rpt.id}
                 data-testid={`report-card-${rpt.id}`}
@@ -99,12 +135,35 @@ export default function AdminReports() {
                     <p className="font-semibold text-gray-800 text-sm">{u?.name ?? "ไม่ทราบ"}</p>
                     <p className="text-xs text-gray-400">รหัส: {u?.studentId ?? "-"}</p>
                   </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.bg} ${st.color} whitespace-nowrap`}>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.bg} ${st.color} whitespace-nowrap flex-shrink-0`}>
                     {st.label}
                   </span>
                 </div>
                 <span className="inline-block text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md mb-1.5">{rpt.category}</span>
                 <p className="text-sm text-gray-600 mb-2">{rpt.details}</p>
+
+                {/* รูปภาพประกอบ */}
+                {imageToShow && (
+                  <div 
+                    className="mb-3 rounded-xl overflow-hidden border border-gray-100 cursor-pointer"
+                    onClick={() => setExpandedImage(imageToShow)}>
+                    <img 
+                      src={imageToShow} 
+                      alt="รูปประกอบการรายงาน"
+                      className="w-full max-h-48 object-cover hover:opacity-90 transition-opacity"
+                      onError={(e) => {
+                        const el = e.target as HTMLImageElement;
+                        el.style.display = 'none';
+                        // Show link fallback
+                        el.parentElement!.innerHTML = `<a href="${imageToShow}" target="_blank" class="flex items-center gap-1 p-2 text-xs text-blue-500 hover:underline"><span>🔗 ดูรูปภาพ</span></a>`;
+                      }}
+                    />
+                    <p className="text-[10px] text-gray-400 text-center py-1 bg-gray-50">
+                      <ImageIcon size={10} className="inline mr-1" />กดเพื่อดูรูปเต็ม
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] text-gray-400">
                     {formatDistanceToNow(new Date(rpt.createdAt), { addSuffix: true, locale: th })}
@@ -114,17 +173,20 @@ export default function AdminReports() {
                       {rpt.status === "pending" && (
                         <Button size="sm" variant="ghost"
                           className="h-7 px-2 text-blue-600 text-xs"
+                          disabled={updateMutation.isPending}
                           onClick={() => updateMutation.mutate({ id: rpt.id, status: "in_progress" })}>
                           <Loader2 size={12} className="mr-1" /> ดำเนินการ
                         </Button>
                       )}
                       <Button size="sm" variant="ghost"
                         className="h-7 px-2 text-green-600 text-xs"
+                        disabled={updateMutation.isPending}
                         onClick={() => updateMutation.mutate({ id: rpt.id, status: "resolved" })}>
                         <CheckCircle size={12} className="mr-1" /> แก้ไขแล้ว
                       </Button>
                       <Button size="sm" variant="ghost"
                         className="h-7 px-2 text-red-500 text-xs"
+                        disabled={updateMutation.isPending}
                         onClick={() => updateMutation.mutate({ id: rpt.id, status: "rejected" })}>
                         <XCircle size={12} className="mr-1" /> ปฏิเสธ
                       </Button>

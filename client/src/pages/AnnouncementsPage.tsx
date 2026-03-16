@@ -16,32 +16,55 @@ function formatDate(date: string | Date) {
 
 function AnnouncementCard({ ann, index }: { ann: Announcement; index: number }) {
   const [expanded, setExpanded] = useState(false);
+  const [expandedImage, setExpandedImage] = useState(false);
   return (
-    <div
-      data-testid={`card-announcement-${ann.id}`}
-      className={`bg-white rounded-2xl p-4 border border-gray-100 cursor-pointer card-interactive hover-elevate animate-fade-in-up stagger-${Math.min(index + 1, 6)}`}
-      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}
-      onClick={() => setExpanded(e => !e)}>
-      <div className="flex items-start gap-3">
-        <div className={`w-10 h-10 rounded-xl bg-orange-50 flex-shrink-0 flex items-center justify-center border border-orange-100 mt-0.5 transition-transform duration-300 ${expanded ? "rotate-6 scale-110" : ""}`}>
-          <Megaphone size={18} className="text-orange-500" />
+    <>
+      {expandedImage && ann.imageUrl && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setExpandedImage(false)}>
+          <img src={ann.imageUrl} alt={ann.title} className="max-w-full max-h-full rounded-2xl object-contain" />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-800 text-sm leading-tight">{ann.title}</p>
-          <div className={`overflow-hidden transition-all duration-300 ${expanded ? "max-h-96" : "max-h-10"}`}>
-            <p className={`text-xs text-gray-500 mt-1.5 leading-relaxed`}>
-              {ann.content}
-            </p>
+      )}
+      <div
+        data-testid={`card-announcement-${ann.id}`}
+        className={`bg-white rounded-2xl border border-gray-100 overflow-hidden cursor-pointer card-interactive hover-elevate animate-fade-in-up stagger-${Math.min(index + 1, 6)}`}
+        style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+        {ann.imageUrl && (
+          <div 
+            className="w-full overflow-hidden"
+            onClick={(e) => { e.stopPropagation(); setExpandedImage(true); }}>
+            <img 
+              src={ann.imageUrl}
+              alt={ann.title}
+              className="w-full h-40 object-cover hover:opacity-90 transition-opacity"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-[11px] text-gray-400">{ann.authorName} · {formatDate(ann.createdAt)}</p>
-            <span className={`text-[11px] text-primary font-medium transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>
-              {expanded ? "ย่อลง" : "อ่านเพิ่ม"}
-            </span>
+        )}
+        <div className="p-4" onClick={() => setExpanded(e => !e)}>
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-xl bg-orange-50 flex-shrink-0 flex items-center justify-center border border-orange-100 mt-0.5 transition-transform duration-300 ${expanded ? "rotate-6 scale-110" : ""}`}>
+              <Megaphone size={18} className="text-orange-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-800 text-sm leading-tight">{ann.title}</p>
+              <div className={`overflow-hidden transition-all duration-300 ${expanded ? "max-h-96" : "max-h-10"}`}>
+                <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                  {ann.content}
+                </p>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-[11px] text-gray-400">{ann.authorName} · {formatDate(ann.createdAt)}</p>
+                <span className={`text-[11px] text-primary font-medium transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>
+                  {expanded ? "ย่อลง" : "อ่านเพิ่ม"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

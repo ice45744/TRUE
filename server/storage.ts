@@ -4,11 +4,8 @@ import {
   type Activity, type InsertActivity,
   type Report, type InsertReport,
   type SystemSettings, type InsertSystemSettings,
-  users, announcements, activities, reports, systemSettings,
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
-import { db } from "./db.js";
-import { eq, desc } from "drizzle-orm";
 
 export interface QrToken {
   token: string;
@@ -27,6 +24,7 @@ export interface IStorage {
   updateUserMerits(id: string, amount: number): Promise<User | undefined>;
   updateUserTrashPoints(id: string, amount: number): Promise<User | undefined>;
   updateUserStamps(id: string, amount: number): Promise<User | undefined>;
+  clearAllData(): Promise<void>;
 
   getAnnouncements(): Promise<Announcement[]>;
   getAnnouncement(id: string): Promise<Announcement | undefined>;
@@ -50,33 +48,43 @@ export interface IStorage {
 
   getSystemSettings(): Promise<SystemSettings>;
   updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings>;
-
-  clearAllData(): Promise<void>;
 }
 
-export class PgStorage implements IStorage {
-  // QR tokens stay in-memory (ephemeral by design)
+export class MemStorage implements IStorage {
+  private users: Map<string, User> = new Map();
+  private announcements: Map<string, Announcement> = new Map();
+  private activities: Map<string, Activity> = new Map();
+  private reports: Map<string, Report> = new Map();
   private qrTokens: Map<string, QrToken> = new Map();
+  private systemSettings: SystemSettings = {
+    id: "default",
+    maintenanceMode: 0,
+    maintenanceMessage: "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
+    maintenanceUntil: null,
+  };
+
+  constructor() {}
 
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return this.users.get(id);
   }
 
   async getUserByStudentId(studentId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.studentId, studentId));
-    return user;
+    for (const user of this.users.values()) {
+      if (user.studentId === studentId) return user;
+    }
+    return undefined;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return db.select().from(users);
+    return Array.from(this.users.values());
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
     const isAdmin = insertUser.schoolCode === ADMIN_CODE;
-    const [user] = await db.insert(users).values({
+    const user: User = {
       id,
       studentId: insertUser.studentId,
       name: insertUser.name,
@@ -86,22 +94,21 @@ export class PgStorage implements IStorage {
       merits: 0,
       trashPoints: 0,
       stamps: 0,
-    }).returning();
+    };
+    this.users.set(id, user);
+    console.log(`MemStorage: Created user ${id} (studentId: ${insertUser.studentId}, role: ${user.role})`);
     return user;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id)).returning();
-    return result.length > 0;
+    return this.users.delete(id);
   }
 
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {
     const user = await this.getUser(id);
     if (!user) return undefined;
-    const [updated] = await db.update(users)
-      .set({ merits: user.merits + amount })
-      .where(eq(users.id, id))
-      .returning();
+    const updated = { ...user, merits: user.merits + amount };
+    this.users.set(id, updated);
     return updated;
   }
 
@@ -112,46 +119,63 @@ export class PgStorage implements IStorage {
     const oldStampsFromTrash = Math.floor(user.trashPoints / 10);
     const newStampsFromTrash = Math.floor(newTrash / 10);
     const stampGain = newStampsFromTrash - oldStampsFromTrash;
-    const [updated] = await db.update(users)
-      .set({ trashPoints: newTrash, stamps: user.stamps + stampGain })
-      .where(eq(users.id, id))
-      .returning();
+    const updated = {
+      ...user,
+      trashPoints: newTrash,
+      stamps: user.stamps + stampGain,
+    };
+    this.users.set(id, updated);
     return updated;
   }
 
   async updateUserStamps(id: string, amount: number): Promise<User | undefined> {
     const user = await this.getUser(id);
     if (!user) return undefined;
-    const [updated] = await db.update(users)
-      .set({ stamps: user.stamps + amount })
-      .where(eq(users.id, id))
-      .returning();
+    const updated = { ...user, stamps: user.stamps + amount };
+    this.users.set(id, updated);
     return updated;
   }
 
+  async clearAllData(): Promise<void> {
+    this.users.clear();
+    this.announcements.clear();
+    this.activities.clear();
+    this.reports.clear();
+    this.qrTokens.clear();
+    this.systemSettings = {
+      id: "default",
+      maintenanceMode: 0,
+      maintenanceMessage: "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
+      maintenanceUntil: null,
+    };
+    console.log("MemStorage: Cleared all data");
+  }
+
   async getAnnouncements(): Promise<Announcement[]> {
-    return db.select().from(announcements).orderBy(desc(announcements.createdAt));
+    return Array.from(this.announcements.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAnnouncement(id: string): Promise<Announcement | undefined> {
-    const [ann] = await db.select().from(announcements).where(eq(announcements.id, id));
-    return ann;
+    return this.announcements.get(id);
   }
 
   async createAnnouncement(a: InsertAnnouncement): Promise<Announcement> {
     const id = randomUUID();
-    const [ann] = await db.insert(announcements).values({
+    const ann: Announcement = {
       id,
       title: a.title,
       content: a.content,
       authorName: a.authorName ?? "สภานักเรียน",
-    }).returning();
+      imageUrl: a.imageUrl ?? null,
+      createdAt: new Date(),
+    };
+    this.announcements.set(id, ann);
     return ann;
   }
 
   async deleteAnnouncement(id: string): Promise<boolean> {
-    const result = await db.delete(announcements).where(eq(announcements.id, id)).returning();
-    return result.length > 0;
+    return this.announcements.delete(id);
   }
 
   async getQrToken(token: string): Promise<QrToken | undefined> {
@@ -198,49 +222,53 @@ export class PgStorage implements IStorage {
   }
 
   async getActivities(userId: string): Promise<Activity[]> {
-    return db.select().from(activities)
-      .where(eq(activities.userId, userId))
-      .orderBy(desc(activities.createdAt));
+    return Array.from(this.activities.values())
+      .filter(a => a.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAllActivities(): Promise<Activity[]> {
-    return db.select().from(activities).orderBy(desc(activities.createdAt));
+    return Array.from(this.activities.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createActivity(userId: string, a: InsertActivity): Promise<Activity> {
     const id = randomUUID();
-    const [act] = await db.insert(activities).values({
+    const act: Activity = {
       id,
       userId,
       type: a.type,
       description: a.description,
       imageUrl: a.imageUrl ?? null,
       status: "pending",
-    }).returning();
+      createdAt: new Date(),
+    };
+    this.activities.set(id, act);
     return act;
   }
 
   async updateActivityStatus(id: string, status: string): Promise<Activity | undefined> {
-    const [updated] = await db.update(activities)
-      .set({ status })
-      .where(eq(activities.id, id))
-      .returning();
+    const act = this.activities.get(id);
+    if (!act) return undefined;
+    const updated = { ...act, status };
+    this.activities.set(id, updated);
     return updated;
   }
 
   async getReports(userId: string): Promise<Report[]> {
-    return db.select().from(reports)
-      .where(eq(reports.userId, userId))
-      .orderBy(desc(reports.createdAt));
+    return Array.from(this.reports.values())
+      .filter(r => r.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAllReports(): Promise<Report[]> {
-    return db.select().from(reports).orderBy(desc(reports.createdAt));
+    return Array.from(this.reports.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createReport(userId: string, r: InsertReport): Promise<Report> {
     const id = randomUUID();
-    const [rep] = await db.insert(reports).values({
+    const rep: Report = {
       id,
       userId,
       category: r.category,
@@ -248,47 +276,28 @@ export class PgStorage implements IStorage {
       imageUrl: r.imageUrl ?? null,
       imageLink: r.imageLink ?? null,
       status: "pending",
-    }).returning();
+      createdAt: new Date(),
+    };
+    this.reports.set(id, rep);
     return rep;
   }
 
   async updateReportStatus(id: string, status: string): Promise<Report | undefined> {
-    const [updated] = await db.update(reports)
-      .set({ status })
-      .where(eq(reports.id, id))
-      .returning();
+    const rep = this.reports.get(id);
+    if (!rep) return undefined;
+    const updated = { ...rep, status };
+    this.reports.set(id, updated);
     return updated;
   }
 
   async getSystemSettings(): Promise<SystemSettings> {
-    const [settings] = await db.select().from(systemSettings).where(eq(systemSettings.id, "default"));
-    if (settings) return settings;
-    const [created] = await db.insert(systemSettings).values({
-      id: "default",
-      maintenanceMode: 0,
-      maintenanceMessage: "กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง",
-      maintenanceUntil: null,
-    }).returning();
-    return created;
+    return this.systemSettings;
   }
 
   async updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings> {
-    const current = await this.getSystemSettings();
-    const [updated] = await db.update(systemSettings)
-      .set(settings)
-      .where(eq(systemSettings.id, current.id))
-      .returning();
-    return updated;
-  }
-
-  async clearAllData(): Promise<void> {
-    await db.delete(activities);
-    await db.delete(reports);
-    await db.delete(announcements);
-    await db.delete(users);
-    this.qrTokens.clear();
-    console.log("PgStorage: Cleared all data from PostgreSQL");
+    this.systemSettings = { ...this.systemSettings, ...settings };
+    return this.systemSettings;
   }
 }
 
-export const storage = new PgStorage();
+export const storage = new MemStorage();

@@ -6,18 +6,14 @@ import { log } from "./index.js";
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const userId = req.headers["x-user-id"] as string;
-  log(`Checking admin for user: ${userId}`);
   if (!userId) {
-    log("Auth failed: Missing x-user-id header");
-    return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ (Missing ID)" });
+    return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่" });
   }
   const user = await storage.getUser(userId);
   if (!user) {
-    log(`Auth failed: User ${userId} not found in storage`);
-    return res.status(401).json({ message: "ไม่พบผู้ใช้" });
+    return res.status(401).json({ message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่" });
   }
   if (user.role !== "admin") {
-    log(`Auth failed: User ${userId} is not admin. Role: ${user.role}`);
     return res.status(403).json({ message: "ไม่มีสิทธิ์เข้าถึง" });
   }
   next();
@@ -27,24 +23,6 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-
-  app.post("/api/auth/sync", async (req, res) => {
-    const userId = req.headers["x-user-id"] as string;
-    if (!userId) {
-      return res.status(401).json({ message: "ไม่พบข้อมูลผู้ใช้" });
-    }
-    try {
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "ไม่พบผู้ใช้ในระบบ" });
-      }
-      const { password: _, ...safeUser } = user;
-      res.json(safeUser);
-    } catch (error) {
-      log(`Error syncing user: ${error}`);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการซิงค์ข้อมูล" });
-    }
-  });
 
   app.post("/api/auth/login", async (req, res) => {
     const result = loginSchema.safeParse(req.body);
@@ -81,12 +59,34 @@ export async function registerRoutes(
     res.json(safeUser);
   });
 
+  // System settings (public GET, admin PATCH)
+  app.get("/api/system/settings", async (_req, res) => {
+    const settings = await storage.getSystemSettings();
+    res.json(settings);
+  });
+
+  app.patch("/api/system/settings", requireAdmin, async (req, res) => {
+    try {
+      log(`PATCH /api/system/settings - Body: ${JSON.stringify(req.body)}`);
+      if (Object.keys(req.body).length === 0) {
+        return res.status(400).json({ message: "ไม่มีข้อมูลที่จะอัปเดต" });
+      }
+      const settings = await storage.updateSystemSettings(req.body);
+      log(`Settings updated: ${JSON.stringify(settings)}`);
+      res.json(settings);
+    } catch (error: any) {
+      log(`Error updating settings: ${error.message}`);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Announcements
   app.get("/api/announcements", async (_req, res) => {
     const announcements = await storage.getAnnouncements();
     res.json(announcements);
   });
 
-  app.post("/api/announcements", async (req, res) => {
+  app.post("/api/announcements", requireAdmin, async (req, res) => {
     const result = insertAnnouncementSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
@@ -95,12 +95,13 @@ export async function registerRoutes(
     res.status(201).json(ann);
   });
 
-  app.delete("/api/announcements/:id", async (req, res) => {
+  app.delete("/api/announcements/:id", requireAdmin, async (req, res) => {
     const success = await storage.deleteAnnouncement(req.params.id);
     if (!success) return res.status(404).json({ message: "ไม่พบประกาศ" });
     res.json({ message: "ลบประกาศสำเร็จ" });
   });
 
+  // QR Code
   app.post("/api/qr/generate", requireAdmin, async (req, res) => {
     const { type, expiryMinutes } = req.body;
     if (type !== "checkin" && type !== "stamp") {
@@ -158,14 +159,7 @@ export async function registerRoutes(
       const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
       const dailyKey = `${userId}_${today}`;
       await storage.markQrUsed(token, dailyKey);
-    } else {
-      const success = await storage.markQrUsed(token, userId);
-      if (!success) {
-        return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
-      }
-    }
-
-    if (qr.type === "checkin") {
+      // เช็คชื่อ = ได้แต้มทันที (ไม่ต้องรอ admin)
       await storage.createActivity(userId, { type: "checkin", description: "เช็คชื่อผ่าน QR Code (+1 แต้มความดี)" });
       const updated = await storage.updateUserMerits(userId, 1);
       const { password: _, ...safeUser } = updated!;
@@ -175,6 +169,11 @@ export async function registerRoutes(
         type: "checkin",
       });
     } else {
+      const success = await storage.markQrUsed(token, userId);
+      if (!success) {
+        return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
+      }
+      // แสตมป์ขยะ = ได้แต้มทันที (ไม่ต้องรอ admin)
       await storage.createActivity(userId, { type: "stamp", description: "รับแต้มขยะผ่าน QR Code (+1 แต้มขยะ)" });
       const updated = await storage.updateUserTrashPoints(userId, 1);
       const { password: _, ...safeUser } = updated!;
@@ -187,6 +186,7 @@ export async function registerRoutes(
     }
   });
 
+  // Activities - กิจกรรมความดีต้องรอ Admin อนุมัติก่อนถึงจะได้คะแนน
   app.get("/api/activities/:userId", async (req, res) => {
     const acts = await storage.getActivities(req.params.userId);
     res.json(acts);
@@ -194,24 +194,18 @@ export async function registerRoutes(
 
   app.post("/api/activities/:userId", async (req, res) => {
     try {
-      log(`POST /api/activities/${req.params.userId} - Body: ${JSON.stringify(req.body)}`);
+      log(`POST /api/activities/${req.params.userId}`);
       const result = insertActivitySchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
       }
       const user = await storage.getUser(req.params.userId);
       if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
-      
+
+      // สร้างกิจกรรม แต่ยังไม่ให้คะแนน - รอ Admin อนุมัติก่อน
       const act = await storage.createActivity(req.params.userId, result.data);
-      if (result.data.type === "goodness" || result.data.type === "checkin") {
-        await storage.updateUserMerits(req.params.userId, 1);
-      } else if (result.data.type === "stamp") {
-        await storage.updateUserTrashPoints(req.params.userId, 1);
-      }
-      
-      const updatedUser = await storage.getUser(req.params.userId);
-      const { password: _, ...safeUser } = updatedUser!;
-      log(`Activity created successfully for ${req.params.userId}`);
+      const { password: _, ...safeUser } = user;
+      log(`Activity created (pending approval) for ${req.params.userId}`);
       res.status(201).json({ activity: act, user: safeUser });
     } catch (error: any) {
       log(`Error creating activity: ${error.message}`);
@@ -219,15 +213,20 @@ export async function registerRoutes(
     }
   });
 
+  // Reports
+  app.get("/api/reports/:userId", async (req, res) => {
+    const rpts = await storage.getReports(req.params.userId);
+    res.json(rpts);
+  });
+
   app.post("/api/reports/:userId", async (req, res) => {
     try {
-      log(`POST /api/reports/${req.params.userId} - Body: ${JSON.stringify(req.body)}`);
+      log(`POST /api/reports/${req.params.userId}`);
       const result = insertReportSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
       }
       const rpt = await storage.createReport(req.params.userId, result.data);
-      log(`Report created successfully for ${req.params.userId}`);
       res.status(201).json(rpt);
     } catch (error: any) {
       log(`Error creating report: ${error.message}`);
@@ -243,11 +242,7 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
-    const { id } = req.params;
-    if (typeof id !== "string") {
-      return res.status(400).json({ message: "ID ไม่ถูกต้อง" });
-    }
-    const success = await storage.deleteUser(id);
+    const success = await storage.deleteUser(req.params.id);
     if (!success) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
     res.json({ message: "ลบผู้ใช้สำเร็จ" });
   });
@@ -257,17 +252,21 @@ export async function registerRoutes(
     res.json(acts);
   });
 
+  // เมื่อ Admin อนุมัติกิจกรรมความดี ถึงจะให้คะแนน
   app.patch("/api/admin/activities/:id", requireAdmin, async (req, res) => {
-    const { id } = req.params;
-    if (typeof id !== "string") {
-      return res.status(400).json({ message: "ID ไม่ถูกต้อง" });
-    }
     const { status } = req.body;
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
     }
-    const act = await storage.updateActivityStatus(id, status);
+    const act = await storage.updateActivityStatus(req.params.id, status);
     if (!act) return res.status(404).json({ message: "ไม่พบกิจกรรม" });
+
+    // ให้คะแนนเมื่ออนุมัติกิจกรรมความดีเท่านั้น (ไม่รวม checkin และ stamp ที่ได้ไปแล้ว)
+    if (status === "approved" && act.type === "goodness") {
+      await storage.updateUserMerits(act.userId, 1);
+      log(`Awarded 1 merit to user ${act.userId} for approved goodness activity ${act.id}`);
+    }
+
     res.json(act);
   });
 
@@ -277,39 +276,13 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/reports/:id", requireAdmin, async (req, res) => {
-    const { id } = req.params;
-    if (typeof id !== "string") {
-      return res.status(400).json({ message: "ID ไม่ถูกต้อง" });
-    }
     const { status } = req.body;
     if (!["resolved", "rejected", "in_progress"].includes(status)) {
       return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
     }
-    const rpt = await storage.updateReportStatus(id, status);
+    const rpt = await storage.updateReportStatus(req.params.id, status);
     if (!rpt) return res.status(404).json({ message: "ไม่พบรายงาน" });
     res.json(rpt);
-  });
-
-  app.get("/api/system/settings", async (_req, res) => {
-    const settings = await storage.getSystemSettings();
-    res.json(settings);
-  });
-
-  app.patch("/api/system/settings", requireAdmin, async (req, res) => {
-    try {
-      log(`PATCH /api/system/settings - Body: ${JSON.stringify(req.body)}`);
-      // Validate that at least one field is being updated
-      if (Object.keys(req.body).length === 0) {
-        return res.status(400).json({ message: "No data provided for update" });
-      }
-      const settings = await storage.updateSystemSettings(req.body);
-      log(`Settings updated successfully in MemStorage: ${JSON.stringify(settings)}`);
-      res.json(settings);
-    } catch (error: any) {
-      log(`Error updating settings: ${error.message}`);
-      console.error("Full error updating settings:", error);
-      res.status(500).json({ message: error.message });
-    }
   });
 
   app.get("/api/admin/stats", requireAdmin, async (_req, res) => {
@@ -334,7 +307,6 @@ export async function registerRoutes(
       await storage.clearAllData();
       res.json({ message: "ลบข้อมูลทั้งหมดเรียบร้อย" });
     } catch (error: any) {
-      log(`Error clearing all data: ${error.message}`);
       res.status(500).json({ message: error.message });
     }
   });

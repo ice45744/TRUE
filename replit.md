@@ -20,15 +20,15 @@ A Thai school student digital system for managing goodness activities, stamp col
    - **QR เช็คชื่อ (Checkin)**: Permanent QR, works 06:00-08:00 only, one scan per student per day, +1 merit point
    - **QR ธนาคารขยะ (Stamp)**: Single-use QR, expires in 1/2/5 minutes, +1 trash point
    - **Stamp conversion**: Every 10 points (merit or trash) = 1 stamp (auto-calculated)
-5. **Announcements** - List of school announcements (expandable cards)
-6. **Report/Complaint** - Form with category select, details textarea, image link
+5. **Announcements** - List of school announcements (expandable cards, with images)
+6. **Report/Complaint** - Form with category select, details textarea, image upload/link
 7. **Profile** - Avatar, 3 stats (merits, trashPoints, stamps), settings links, logout
 8. **Admin Panel** - Role-based admin system with:
-   - Dashboard: Overview stats, logout button
-   - Manage Students: Search, view, delete students (shows merits, trashPoints, stamps)
-   - Approve Activities: Filter by status, approve/reject activities
-   - Manage Announcements: Create, view, delete announcements
-   - Manage Reports: Filter by status, update status
+   - Dashboard: Overview stats, maintenance mode toggle (requires datetime + message), logout button
+   - Manage Students: Search, view, delete students (shows merits, trashPoints, stamps) — shows session-expired error on 401
+   - Approve Activities: Filter by status, approve/reject goodness activities (+1 merit on approve), view images — shows session-expired error on 401
+   - Manage Announcements: Create with image upload (ImgBB) or link, view images, delete
+   - View Reports: Filter by status, view images from reports, update status — shows session-expired error on 401
    - QR Code Generator: Create checkin (permanent) and stamp (timed) QR codes
 
 ## Routes
