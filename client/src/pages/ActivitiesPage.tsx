@@ -307,10 +307,20 @@ function RewardsTab() {
                 data-testid={`reward-item-${r.id}`}
                 className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in-up"
                 style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <Gift size={18} className="text-green-600" />
+                {r.imageUrl && (
+                  <div className="w-full rounded-xl overflow-hidden mb-3 -mx-0">
+                    <img
+                      src={r.imageUrl}
+                      alt={r.title}
+                      className="w-full h-36 object-cover rounded-xl" />
                   </div>
+                )}
+                <div className="flex items-start gap-3">
+                  {!r.imageUrl && (
+                    <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <Gift size={18} className="text-green-600" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 text-sm">{r.title}</p>
                     {r.description && <p className="text-xs text-gray-400 mt-0.5">{r.description}</p>}
