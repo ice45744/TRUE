@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Stats {
   totalStudents: number;
@@ -39,6 +40,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [mUntil, setMUntil] = useState("");
   const [mMessage, setMMessage] = useState("");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { data: settings } = useQuery<SystemSettings>({
     queryKey: ["/api/system/settings"],
@@ -127,7 +129,7 @@ export default function AdminDashboard() {
         </div>
         <button
           data-testid="button-admin-logout"
-          onClick={logout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center border border-red-100 text-red-400 card-interactive">
           <LogOut size={16} />
         </button>
@@ -277,6 +279,26 @@ export default function AdminDashboard() {
           </Link>
         ))}
       </div>
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="rounded-2xl max-w-[320px] mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base">ออกจากระบบ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-gray-500">
+              ยืนยันการออกจากระบบแอดมิน คุณจะต้องล็อกอินใหม่เพื่อเข้าใช้งาน
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2 sm:flex-row">
+            <AlertDialogCancel className="flex-1 rounded-xl h-10 text-sm m-0">ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="button-confirm-logout"
+              onClick={logout}
+              className="flex-1 rounded-xl h-10 text-sm bg-red-500 hover:bg-red-600 m-0">
+              ออกจากระบบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
