@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
+import { storage } from "./storage.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -100,6 +101,22 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
     },
   );
+
+  // Background cleanup: ลบกิจกรรม/รายงานที่อนุมัติ/ปฏิเสธแล้วนานเกิน 24 ชั่วโมง
+  async function runCleanup() {
+    try {
+      const result = await storage.cleanupExpiredItems();
+      if (result.deletedActivities > 0 || result.deletedReports > 0) {
+        log(`Cleanup: ลบกิจกรรม ${result.deletedActivities} รายการ, รายงาน ${result.deletedReports} รายการ (เกิน 24 ชั่วโมง)`);
+      }
+    } catch (err: any) {
+      log(`Cleanup error: ${err.message}`);
+    }
+  }
+
+  // รันทันทีที่เริ่มและทุก 1 ชั่วโมง
+  runCleanup();
+  setInterval(runCleanup, 60 * 60 * 1000);
 })();
 
 export default app;

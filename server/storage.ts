@@ -8,7 +8,7 @@ import {
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
 import { db } from "./db.js";
-import { eq } from "drizzle-orm";
+import { eq, and, lte, isNotNull, or } from "drizzle-orm";
 
 export interface QrToken {
   token: string;
@@ -48,6 +48,8 @@ export interface IStorage {
   getAllReports(): Promise<Report[]>;
   createReport(userId: string, r: InsertReport): Promise<Report>;
   updateReportStatus(id: string, status: string): Promise<Report | undefined>;
+
+  cleanupExpiredItems(): Promise<{ deletedActivities: number; deletedReports: number }>;
 
   getSystemSettings(): Promise<SystemSettings>;
   updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings>;
@@ -233,8 +235,9 @@ export class DbStorage implements IStorage {
   }
 
   async updateActivityStatus(id: string, status: string): Promise<Activity | undefined> {
+    const isResolved = status === "approved" || status === "rejected";
     const [updated] = await db.update(activities)
-      .set({ status })
+      .set({ status, resolvedAt: isResolved ? new Date() : null })
       .where(eq(activities.id, id))
       .returning();
     return updated;
@@ -265,11 +268,47 @@ export class DbStorage implements IStorage {
   }
 
   async updateReportStatus(id: string, status: string): Promise<Report | undefined> {
+    const isResolved = status === "resolved" || status === "rejected";
     const [updated] = await db.update(reports)
-      .set({ status })
+      .set({ status, resolvedAt: isResolved ? new Date() : null })
       .where(eq(reports.id, id))
       .returning();
     return updated;
+  }
+
+  async cleanupExpiredItems(): Promise<{ deletedActivities: number; deletedReports: number }> {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const deletedActRows = await db.delete(activities)
+      .where(
+        and(
+          isNotNull(activities.resolvedAt),
+          lte(activities.resolvedAt, cutoff),
+          or(
+            eq(activities.status, "approved"),
+            eq(activities.status, "rejected"),
+          )
+        )
+      )
+      .returning();
+
+    const deletedRptRows = await db.delete(reports)
+      .where(
+        and(
+          isNotNull(reports.resolvedAt),
+          lte(reports.resolvedAt, cutoff),
+          or(
+            eq(reports.status, "resolved"),
+            eq(reports.status, "rejected"),
+          )
+        )
+      )
+      .returning();
+
+    return {
+      deletedActivities: deletedActRows.length,
+      deletedReports: deletedRptRows.length,
+    };
   }
 
   async getSystemSettings(): Promise<SystemSettings> {

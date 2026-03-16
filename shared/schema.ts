@@ -31,6 +31,7 @@ export const activities = pgTable("activities", {
   imageUrl: text("image_url"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
 });
 
 export const reports = pgTable("reports", {
@@ -42,6 +43,7 @@ export const reports = pgTable("reports", {
   imageLink: text("image_link"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
