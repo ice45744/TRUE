@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Recycle, Clock, ChevronRight, LayoutDashboard, LogOut, QrCode, Star, Settings, Power } from "lucide-react";
+import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Clock, ChevronRight, LayoutDashboard, LogOut, QrCode, Star, Settings, ShieldOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -132,6 +132,29 @@ export default function AdminDashboard() {
           <LogOut size={16} />
         </button>
       </div>
+
+      {settings?.maintenanceMode === 1 && (
+        <div className="bg-red-500 rounded-2xl p-4 mb-5 animate-bounce-in" style={{ boxShadow: "0 4px 20px rgba(239,68,68,0.4)" }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <ShieldOff size={18} className="text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">โหมดปรับปรุงเปิดอยู่!</p>
+                <p className="text-red-100 text-xs">นักเรียนเข้าระบบไม่ได้ในขณะนี้</p>
+              </div>
+            </div>
+            <button
+              data-testid="button-emergency-maintenance-off"
+              onClick={() => updateSettings.mutate({ maintenanceMode: 0, maintenanceUntil: null } as any)}
+              disabled={updateSettings.isPending}
+              className="bg-white text-red-500 font-bold text-xs px-4 py-2 rounded-xl flex-shrink-0 active:scale-95 transition-transform">
+              {updateSettings.isPending ? "..." : "ปิดทันที"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 gap-3 mb-5">
