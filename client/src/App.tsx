@@ -166,7 +166,6 @@ function AppShell() {
   const [location] = useLocation();
   const isAuth = location === "/auth";
   const isAdminPage = location.startsWith("/admin");
-  const showAdminNav = isAdmin && (isAdminPage || location === "/profile");
 
   return (
     <div className="min-h-screen" style={{ background: "#F0F4FA", fontFamily: "'Sarabun', 'Inter', sans-serif" }}>
@@ -187,8 +186,8 @@ function AppShell() {
           <Route path="/admin/rewards" component={() => <AdminRoute component={AdminRewards} />} />
           <Route component={NotFound} />
         </Switch>
-        {user && !isAuth && !showAdminNav && <StudentBottomNav />}
-        {user && showAdminNav && <AdminBottomNav />}
+        {user && !isAuth && !isAdminPage && <StudentBottomNav />}
+        {user && isAdmin && isAdminPage && <AdminBottomNav />}
       </div>
     </div>
   );

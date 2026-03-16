@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle, Star, Sparkles } from "lucide-react";
+import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle, Star, Sparkles, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Announcement } from "@shared/schema";
@@ -28,7 +28,7 @@ const quickActions = [
 ];
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const { data: announcements, isLoading } = useQuery<Announcement[]>({
     queryKey: ["/api/announcements"],
@@ -93,6 +93,24 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="px-4 mt-5 animate-fade-in-up stagger-2">
+          <Link href="/admin">
+            <div className="rounded-2xl p-4 flex items-center gap-4 cursor-pointer card-interactive"
+              style={{ background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)", boxShadow: "0 4px 16px rgba(79,70,229,0.35)" }}>
+              <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck size={22} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-bold text-sm">แผงควบคุม Admin</p>
+                <p className="text-indigo-200 text-xs mt-0.5">จัดการนักเรียน กิจกรรม และของรางวัล</p>
+              </div>
+              <ChevronRight size={18} className="text-white/70" />
+            </div>
+          </Link>
+        </div>
+      )}
 
       <div className="px-4 mt-5 animate-fade-in-up stagger-3">
         <div className="flex items-center justify-between mb-3">

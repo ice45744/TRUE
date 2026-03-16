@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
-import { useLocation, Link } from "wouter";
-import { LogOut, User, Settings, Award, Recycle, ChevronRight, Star, ShieldCheck } from "lucide-react";
+import { useLocation } from "wouter";
+import { LogOut, User, Settings, Award, Recycle, ChevronRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -10,7 +10,7 @@ function getInitials(name: string) {
 }
 
 export default function ProfilePage() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -115,17 +115,6 @@ export default function ProfilePage() {
           <ChevronRight size={16} className="text-gray-400" />
         </button>
       </div>
-
-      {isAdmin && (
-        <Link href="/admin">
-          <button
-            data-testid="button-goto-admin"
-            className="w-full mb-3 bg-indigo-50 border border-indigo-100 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-indigo-600 font-semibold text-sm card-interactive hover-elevate animate-fade-in-up stagger-5">
-            <ShieldCheck size={16} />
-            เข้าสู่แผงควบคุม Admin
-          </button>
-        </Link>
-      )}
 
       <button
         data-testid="button-logout"
