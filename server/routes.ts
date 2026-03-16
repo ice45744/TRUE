@@ -176,11 +176,11 @@ export async function registerRoutes(
         return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
       }
       // แสตมป์ขยะ = ได้แต้มทันที (ไม่ต้องรอ admin)
-      await storage.createActivity(userId, { type: "stamp", description: "รับแต้มขยะผ่าน QR Code (+10 แต้มขยะ = 1 วงกลม)" });
+      await storage.createActivity(userId, { type: "stamp", description: "รับแต้มขยะผ่าน QR Code (+10 แต้มขยะ = 1 แสตมป์)" });
       const updated = await storage.updateUserTrashPoints(userId, 10);
       const { password: _, ...safeUser } = updated!;
       res.json({
-        message: `รับแต้มขยะสำเร็จ! ได้รับ 10 แต้มขยะ = 1 วงกลม (รวม ${updated!.trashPoints} แต้ม)`,
+        message: `รับแต้มขยะสำเร็จ! ได้รับ 10 แต้มขยะ = 1 แสตมป์ (รวม ${updated!.trashPoints} แต้ม)`,
         user: safeUser,
         type: "stamp",
       });

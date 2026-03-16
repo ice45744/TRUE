@@ -215,7 +215,7 @@ function StampTab() {
           <h3 className="font-bold text-gray-800 text-sm">บัตรสะสมแสตมป์</h3>
           <span className="text-green-500 font-bold text-sm">{displayStamps}<span className="text-gray-400 font-normal">/{MAX_STAMPS}</span></span>
         </div>
-        <p className="text-xs text-gray-500 mb-4">สแกน QR 1 ครั้ง = 10 แต้ม = 1 วงกลม</p>
+        <p className="text-xs text-gray-500 mb-4">สแกน QR 1 ครั้ง = 10 แต้ม = 1 แสตมป์</p>
         <div className="h-2 bg-gray-100 rounded-full mb-4 overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
