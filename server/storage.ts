@@ -5,7 +5,7 @@ import {
   type Report, type InsertReport,
   type SystemSettings, type InsertSystemSettings,
   type Reward, type InsertReward,
-  type Redemption,
+  type Redemption, type UpdateProfile,
   users, announcements, activities, reports, systemSettings, rewards, redemptions,
 } from "../shared/schema.js";
 import { randomUUID } from "crypto";
@@ -26,6 +26,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   deleteUser(id: string): Promise<boolean>;
+  updateUserProfile(id: string, data: UpdateProfile): Promise<User | undefined>;
   updateUserMerits(id: string, amount: number): Promise<User | undefined>;
   updateUserTrashPoints(id: string, amount: number): Promise<User | undefined>;
   updateUserStamps(id: string, amount: number): Promise<User | undefined>;
@@ -106,6 +107,15 @@ export class DbStorage implements IStorage {
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateUserProfile(id: string, data: UpdateProfile): Promise<User | undefined> {
+    const updates: Partial<typeof users.$inferInsert> = {};
+    if (data.name !== undefined) updates.name = data.name;
+    if (data.avatarUrl !== undefined) updates.avatarUrl = data.avatarUrl;
+    if (Object.keys(updates).length === 0) return this.getUser(id);
+    const [updated] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return updated;
   }
 
   async updateUserMerits(id: string, amount: number): Promise<User | undefined> {

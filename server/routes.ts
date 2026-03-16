@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema, insertSystemSettingsSchema, insertRewardSchema } from "../shared/schema.js";
+import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema, insertSystemSettingsSchema, insertRewardSchema, updateProfileSchema } from "../shared/schema.js";
 import { log } from "./index.js";
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
@@ -57,6 +57,25 @@ export async function registerRoutes(
     if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
     const { password: _, ...safeUser } = user;
     res.json(safeUser);
+  });
+
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const requesterId = req.headers["x-user-id"] as string;
+      if (requesterId !== req.params.id) {
+        return res.status(403).json({ message: "ไม่มีสิทธิ์แก้ไขข้อมูลนี้" });
+      }
+      const result = updateProfileSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
+      }
+      const updated = await storage.updateUserProfile(req.params.id, result.data);
+      if (!updated) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+      const { password: _, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   // System settings (public GET, admin PATCH)

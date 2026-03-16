@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   merits: integer("merits").notNull().default(0),
   trashPoints: integer("trash_points").notNull().default(0),
   stamps: integer("stamps").notNull().default(0),
+  avatarUrl: text("avatar_url"),
 });
 
 export const announcements = pgTable("announcements", {
@@ -77,6 +78,12 @@ export const insertReportSchema = createInsertSchema(reports).pick({
   imageUrl: true,
   imageLink: true,
 });
+
+export const updateProfileSchema = z.object({
+  name: z.string().min(1, "กรุณากรอกชื่อ").optional(),
+  avatarUrl: z.string().nullable().optional(),
+});
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
