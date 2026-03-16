@@ -5,10 +5,11 @@ A Thai school student digital system for managing goodness activities, stamp col
 
 ## Architecture
 - **Frontend**: React + TypeScript + Tailwind CSS + shadcn/ui, Thai language (Sarabun font)
-- **Backend**: Express.js with in-memory storage (MemStorage)
+- **Backend**: Express.js with Drizzle ORM + Neon PostgreSQL (DbStorage)
 - **Auth**: localStorage-based client auth + backend session (no Firebase)
 - **Routing**: wouter for client-side routing
-- **Data Persistence**: In-memory only (data resets on server restart)
+- **Data Persistence**: Neon PostgreSQL via `NEON_DATABASE_URL` (persistent across restarts)
+- **QR Tokens**: In-memory only (short-lived, regenerated as needed)
 
 ## Features
 1. **Authentication** - Login/Register with student ID and password
