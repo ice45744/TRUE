@@ -166,6 +166,7 @@ function AppShell() {
   const [location] = useLocation();
   const isAuth = location === "/auth";
   const isAdminPage = location.startsWith("/admin");
+  const showAdminNav = isAdmin && (isAdminPage || location === "/profile");
 
   return (
     <div className="min-h-screen" style={{ background: "#F0F4FA", fontFamily: "'Sarabun', 'Inter', sans-serif" }}>
@@ -186,15 +187,14 @@ function AppShell() {
           <Route path="/admin/rewards" component={() => <AdminRoute component={AdminRewards} />} />
           <Route component={NotFound} />
         </Switch>
-        {user && !isAuth && !isAdminPage && <StudentBottomNav />}
-        {user && isAdmin && isAdminPage && <AdminBottomNav />}
+        {user && !isAuth && !showAdminNav && <StudentBottomNav />}
+        {user && showAdminNav && <AdminBottomNav />}
       </div>
     </div>
   );
 }
 
 function StudentBottomNav() {
-  const { isAdmin } = useAuth();
   const [location] = useLocation();
 
   const tabs = [
@@ -202,10 +202,7 @@ function StudentBottomNav() {
     { href: "/activities", label: "กิจกรรม", icon: ClipboardList },
     { href: "/announcements", label: "ประกาศ", icon: Megaphone },
     { href: "/report", label: "แจ้งปัญหา", icon: AlertTriangle },
-    ...(isAdmin
-      ? [{ href: "/admin", label: "แอดมิน", icon: ShieldCheck }]
-      : [{ href: "/profile", label: "โปรไฟล์", icon: User }]
-    ),
+    { href: "/profile", label: "โปรไฟล์", icon: User },
   ];
 
   return (
@@ -241,7 +238,7 @@ function AdminBottomNav() {
     { href: "/admin/users", label: "นักเรียน", icon: Users },
     { href: "/admin/activities", label: "กิจกรรม", icon: ClipboardList },
     { href: "/admin/rewards", label: "ของรางวัล", icon: Gift },
-    { href: "/", label: "แอป", icon: Home },
+    { href: "/profile", label: "โปรไฟล์", icon: User },
   ];
 
   return (
