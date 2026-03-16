@@ -77,11 +77,9 @@ function MaintenanceOverlay() {
         </div>
       </div>
 
-      <Link href="/auth">
-        <span className="mt-10 text-xs text-gray-300 hover:text-gray-400 transition-colors cursor-pointer underline underline-offset-2">
-          สำหรับเจ้าหน้าที่เท่านั้น
-        </span>
-      </Link>
+      <a href="/auth" className="mt-10 text-xs text-gray-300 hover:text-gray-400 transition-colors underline underline-offset-2">
+        สำหรับเจ้าหน้าที่เท่านั้น
+      </a>
     </div>
   );
 }
