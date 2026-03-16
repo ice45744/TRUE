@@ -363,5 +363,10 @@ export async function registerRoutes(
     res.json(list);
   });
 
+  app.get("/api/admin/redemptions", requireAdmin, async (_req, res) => {
+    const list = await storage.getAllRedemptions();
+    res.json(list);
+  });
+
   return httpServer;
 }

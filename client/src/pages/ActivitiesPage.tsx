@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sun, QrCode, Cloud, CheckCircle, Gift, Package } from "lucide-react";
+import { Sun, QrCode, Cloud, CheckCircle, Gift, Package, History } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QrScanner } from "@/components/QrScanner";
-import { Reward } from "@shared/schema";
+import { Reward, Redemption } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
+import { th } from "date-fns/locale";
 
 const MAX_STAMPS = 10;
 
@@ -183,7 +185,26 @@ function StampTab() {
   const queryClient = useQueryClient();
   const [showScanner, setShowScanner] = useState(false);
 
-  const trashPts = user?.trashPoints ?? 0;
+  const { data: freshUser } = useQuery<{ trashPoints: number; stamps: number; merits: number }>({
+    queryKey: ["/api/users", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (freshUser && user) {
+      if (
+        freshUser.trashPoints !== user.trashPoints ||
+        freshUser.stamps !== user.stamps ||
+        freshUser.merits !== user.merits
+      ) {
+        updateUser({ ...user, ...freshUser });
+      }
+    }
+  }, [freshUser]);
+
+  const trashPts = freshUser?.trashPoints ?? user?.trashPoints ?? 0;
   const displayStamps = trashPts % MAX_STAMPS;
 
   const scanMutation = useMutation({
@@ -193,6 +214,7 @@ function StampTab() {
       if (!res.ok) throw new Error(data.message);
       updateUser(data.user);
       queryClient.invalidateQueries({ queryKey: ["/api/activities", user!.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user!.id] });
       toast({ title: "สำเร็จ!", description: data.message });
     },
     onError: (err: any) => {
@@ -258,9 +280,15 @@ function StampTab() {
 function RewardsTab() {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: rewards, isLoading } = useQuery<Reward[]>({
     queryKey: ["/api/rewards"],
+  });
+
+  const { data: myRedemptions } = useQuery<Redemption[]>({
+    queryKey: ["/api/redemptions"],
+    enabled: !!user?.id,
   });
 
   const redeemMutation = useMutation({
@@ -269,6 +297,8 @@ function RewardsTab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       updateUser(data.user);
+      queryClient.invalidateQueries({ queryKey: ["/api/rewards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/redemptions"] });
       toast({ title: "แลกรับสำเร็จ!", description: data.message });
     },
     onError: (err: any) => {
@@ -353,6 +383,31 @@ function RewardsTab() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {(myRedemptions ?? []).length > 0 && (
+        <div className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in-up" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <History size={16} className="text-green-500" />
+            <h3 className="font-bold text-gray-800 text-sm">ประวัติการแลกของรางวัล</h3>
+          </div>
+          <div className="space-y-2">
+            {(myRedemptions ?? []).map(r => (
+              <div key={r.id} data-testid={`redemption-history-${r.id}`} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Gift size={14} className="text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{r.rewardTitle}</p>
+                  <p className="text-xs text-gray-400">
+                    {formatDistanceToNow(new Date(r.createdAt), { addSuffix: true, locale: th })}
+                  </p>
+                </div>
+                <span className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">แลกแล้ว</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

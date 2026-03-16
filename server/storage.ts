@@ -62,6 +62,7 @@ export interface IStorage {
   updateRewardStock(id: string, delta: number): Promise<Reward | undefined>;
 
   getRedemptions(userId: string): Promise<Redemption[]>;
+  getAllRedemptions(): Promise<(Redemption & { userName: string; studentId: string })[]>;
   createRedemption(userId: string, rewardId: string): Promise<{ ok: boolean; message: string; user?: User; redemption?: Redemption }>;
 }
 
@@ -380,6 +381,17 @@ export class DbStorage implements IStorage {
   async getRedemptions(userId: string): Promise<Redemption[]> {
     const rows = await db.select().from(redemptions).where(eq(redemptions.userId, userId));
     return rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getAllRedemptions(): Promise<(Redemption & { userName: string; studentId: string })[]> {
+    const rows = await db.select().from(redemptions);
+    const allUsers = await db.select().from(users);
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+    const result = rows.map(r => {
+      const u = userMap.get(r.userId);
+      return { ...r, userName: u?.name ?? "ไม่ทราบ", studentId: u?.studentId ?? "-" };
+    });
+    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createRedemption(userId: string, rewardId: string): Promise<{ ok: boolean; message: string; user?: User; redemption?: Redemption }> {

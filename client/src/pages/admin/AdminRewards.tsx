@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Gift, ArrowLeft, Trash2, Plus, Package, ImageIcon, X } from "lucide-react";
+import { Gift, ArrowLeft, Trash2, Plus, Package, ImageIcon, X, History, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useRef } from "react";
 import { Reward } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
+import { th } from "date-fns/locale";
+
+interface RedemptionWithUser {
+  id: string;
+  userId: string;
+  rewardId: string;
+  rewardTitle: string;
+  createdAt: string;
+  userName: string;
+  studentId: string;
+}
 
 const IMGBB_KEY = "baf409d03cf4975986f6d44b5a1a2919";
 
@@ -35,9 +47,15 @@ export default function AdminRewards() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageLink, setImageLink] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const { data: rewards, isLoading } = useQuery<Reward[]>({
     queryKey: ["/api/rewards"],
+  });
+
+  const { data: redemptions, isLoading: redemptionsLoading } = useQuery<RedemptionWithUser[]>({
+    queryKey: ["/api/admin/redemptions"],
+    enabled: showHistory,
   });
 
   const createMutation = useMutation({
@@ -268,6 +286,55 @@ export default function AdminRewards() {
           ))}
         </div>
       )}
+
+      <div className="mt-4">
+        <button
+          data-testid="button-toggle-redemption-history"
+          className="w-full flex items-center justify-between bg-white rounded-2xl p-4 border border-gray-100 card-interactive hover-elevate"
+          style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}
+          onClick={() => setShowHistory(v => !v)}>
+          <div className="flex items-center gap-2">
+            <History size={18} className="text-green-500" />
+            <span className="font-bold text-gray-800 text-sm">ประวัติการแลกของรางวัล</span>
+          </div>
+          <span className="text-xs text-gray-400">{showHistory ? "ซ่อน ▲" : "แสดง ▼"}</span>
+        </button>
+
+        {showHistory && (
+          <div className="mt-2 bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
+            {redemptionsLoading ? (
+              <div className="p-4 space-y-2">
+                {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-50 rounded-xl animate-pulse" />)}
+              </div>
+            ) : (redemptions ?? []).length === 0 ? (
+              <div className="py-10 text-center text-gray-400 text-sm">
+                <History size={32} className="mx-auto mb-2 text-gray-300" />
+                <p>ยังไม่มีประวัติการแลก</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {(redemptions ?? []).map(r => (
+                  <div key={r.id} data-testid={`admin-redemption-${r.id}`} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <Gift size={16} className="text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{r.rewardTitle}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <User size={11} className="text-gray-400" />
+                        <p className="text-xs text-gray-500 truncate">{r.userName} <span className="text-gray-400">({r.studentId})</span></p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-400 flex-shrink-0">
+                      {formatDistanceToNow(new Date(r.createdAt), { addSuffix: true, locale: th })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
