@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings, Gift, House } from "lucide-react";
+import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings, Gift, House, Music, VolumeX } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SystemSettings } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
@@ -23,6 +23,7 @@ function MaintenanceOverlay() {
   const [adminCode, setAdminCode] = useState("");
   const [codeError, setCodeError] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
 
   const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
 
@@ -65,13 +66,19 @@ function MaintenanceOverlay() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const isVisible = settings && settings.maintenanceMode === 1 && !isAdmin && location !== "/auth";
-    if (isVisible) {
-      audio.volume = 0.4;
-      audio.play().catch(() => {});
+    audio.volume = 0.4;
+    if (playing) {
+      audio.play().catch(() => setPlaying(false));
     } else {
       audio.pause();
-      audio.currentTime = 0;
+    }
+  }, [playing]);
+
+  useEffect(() => {
+    const isClosed = !settings || settings.maintenanceMode === 0 || isAdmin || location === "/auth";
+    if (isClosed) {
+      audioRef.current?.pause();
+      setPlaying(false);
     }
   }, [settings?.maintenanceMode, isAdmin, location]);
 
@@ -82,6 +89,16 @@ function MaintenanceOverlay() {
   return (
     <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
       <audio ref={audioRef} src={morningRaysSrc} loop preload="auto" />
+
+      <button
+        onClick={() => setPlaying(p => !p)}
+        className={`absolute top-5 right-5 w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-md ${
+          playing ? "bg-blue-600 text-white shadow-blue-200" : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+        }`}
+        title={playing ? "ปิดเพลง" : "เปิดเพลง"}>
+        {playing ? <Music size={18} /> : <VolumeX size={18} />}
+      </button>
+
       <div className="w-24 h-24 mb-6 rounded-full bg-red-50 flex items-center justify-center animate-pulse">
         <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center">
           <Settings className="text-white w-8 h-8 animate-spin-slow" />
@@ -108,6 +125,9 @@ function MaintenanceOverlay() {
           <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:-0.15s]" />
           <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
         </div>
+        {!playing && (
+          <p className="text-xs text-gray-400 mt-2">กด <Music className="inline w-3 h-3" /> มุมขวาบนเพื่อเปิดเพลง</p>
+        )}
       </div>
 
       <button
