@@ -7,7 +7,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings, Gift, House } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SystemSettings } from "@shared/schema";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import morningRaysSrc from "@/assets/morning_rays.mp3";
 
 function MaintenanceOverlay() {
   const { isAdmin } = useAuth();
@@ -21,6 +22,7 @@ function MaintenanceOverlay() {
   const [showAdminBox, setShowAdminBox] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [codeError, setCodeError] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const ADMIN_CODE = "สภานักเรียนปี2569/1_2";
 
@@ -60,12 +62,26 @@ function MaintenanceOverlay() {
     return () => clearInterval(timer);
   }, [settings?.maintenanceUntil]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const isVisible = settings && settings.maintenanceMode === 1 && !isAdmin && location !== "/auth";
+    if (isVisible) {
+      audio.volume = 0.4;
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  }, [settings?.maintenanceMode, isAdmin, location]);
+
   if (!settings || settings.maintenanceMode === 0 || isAdmin) return null;
   if (!settings.maintenanceUntil) return null;
   if (location === "/auth") return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+      <audio ref={audioRef} src={morningRaysSrc} loop preload="auto" />
       <div className="w-24 h-24 mb-6 rounded-full bg-red-50 flex items-center justify-center animate-pulse">
         <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center">
           <Settings className="text-white w-8 h-8 animate-spin-slow" />

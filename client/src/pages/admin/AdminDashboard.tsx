@@ -39,7 +39,8 @@ export default function AdminDashboard() {
   });
   const { user, logout } = useAuth();
   const { toast } = useToast();
-  const [mUntil, setMUntil] = useState("");
+  const [mHours, setMHours] = useState("0");
+  const [mMinutes, setMMinutes] = useState("30");
   const [mMessage, setMMessage] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -50,27 +51,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (settings) {
       setMMessage(settings.maintenanceMessage);
-      if (settings.maintenanceUntil) {
-        try {
-          const date = new Date(settings.maintenanceUntil);
-          const formatted = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-          setMUntil(formatted);
-        } catch (e) {
-          console.error("Invalid date from settings", e);
-        }
+      if (settings.maintenanceUntil && settings.maintenanceMode === 1) {
+        const remaining = Math.max(0, new Date(settings.maintenanceUntil).getTime() - Date.now());
+        const remMin = Math.ceil(remaining / 60000);
+        setMHours(String(Math.floor(remMin / 60)));
+        setMMinutes(String(remMin % 60));
       }
     }
-  }, [settings]);
+  }, [settings?.maintenanceUntil, settings?.maintenanceMode]);
+
+  const getDurationMs = () => (Number(mHours) * 60 + Number(mMinutes)) * 60000;
 
   const updateSettings = useMutation({
     mutationFn: async (vars: Partial<SystemSettings>) => {
-      // Create a clean object with only necessary fields
       const payload: any = {};
       if (vars.maintenanceMode !== undefined) payload.maintenanceMode = vars.maintenanceMode;
       if (vars.maintenanceMessage !== undefined) payload.maintenanceMessage = vars.maintenanceMessage;
       if (vars.maintenanceUntil !== undefined) payload.maintenanceUntil = vars.maintenanceUntil;
-
-      console.log("Mutation: Sending payload:", payload);
       const res = await apiRequest("PATCH", "/api/system/settings", payload);
       return res.json();
     },
@@ -79,42 +76,39 @@ export default function AdminDashboard() {
       toast({ title: "อัปเดตการตั้งค่าสำเร็จ" });
     },
     onError: (error: Error) => {
-      console.error("Mutation error:", error);
       let errorMsg = error.message;
       if (errorMsg.includes("401") || errorMsg.includes("403")) {
         errorMsg = "เซสชันหมดอายุหรือไม่มีสิทธิ์แอดมิน กรุณาเข้าสู่ระบบใหม่";
       }
-      toast({ 
-        title: "อัปเดตการตั้งค่าไม่สำเร็จ", 
-        description: errorMsg, 
-        variant: "destructive" 
-      });
+      toast({ title: "อัปเดตการตั้งค่าไม่สำเร็จ", description: errorMsg, variant: "destructive" });
     },
   });
 
-  const toUTCIso = (localStr: string) => new Date(localStr).toISOString();
-
   const toggleMaintenance = (checked: boolean) => {
-    if (checked && !mUntil) {
+    const dur = getDurationMs();
+    if (checked && dur <= 0) {
       toast({
-        title: "ต้องตั้งเวลาก่อน",
-        description: "กรุณากรอกวันและเวลาที่คาดว่าจะเสร็จก่อนเปิดโหมดปรับปรุง",
+        title: "ต้องตั้งระยะเวลาก่อน",
+        description: "กรุณากรอกจำนวนชั่วโมงหรือนาทีก่อนเปิดโหมดปรับปรุง",
         variant: "destructive"
       });
       return;
     }
     const newMode = checked ? 1 : 0;
-    updateSettings.mutate({ 
+    updateSettings.mutate({
       maintenanceMode: newMode,
       maintenanceMessage: mMessage || undefined,
-      maintenanceUntil: checked && mUntil ? toUTCIso(mUntil) : null
+      maintenanceUntil: checked ? new Date(Date.now() + dur).toISOString() : null
     } as any);
   };
 
   const handleSaveSettings = () => {
+    const dur = getDurationMs();
     updateSettings.mutate({
       maintenanceMessage: mMessage,
-      maintenanceUntil: mUntil ? toUTCIso(mUntil) : null
+      ...(settings?.maintenanceMode === 1 && dur > 0
+        ? { maintenanceUntil: new Date(Date.now() + dur).toISOString() }
+        : {})
     } as any);
   };
 
@@ -224,15 +218,27 @@ export default function AdminDashboard() {
           </div>
           <div>
             <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
-              เวลาที่คาดว่าจะเสร็จ (จำเป็นต้องกรอกก่อนเปิด)
+              ระยะเวลาปิดปรับปรุง (จำเป็นต้องกรอกก่อนเปิด)
             </label>
-            <div className="flex gap-2">
-              <Input 
-                type="datetime-local"
-                value={mUntil}
-                onChange={(e) => setMUntil(e.target.value)}
-                className="bg-gray-50 border-none rounded-xl text-sm h-9 flex-1"
+            <div className="flex gap-2 items-center">
+              <Input
+                type="number"
+                min="0"
+                max="99"
+                value={mHours}
+                onChange={e => setMHours(e.target.value)}
+                className="bg-gray-50 border-none rounded-xl text-sm h-9 w-20 text-center"
               />
+              <span className="text-xs text-gray-400 flex-shrink-0">ชม.</span>
+              <Input
+                type="number"
+                min="0"
+                max="59"
+                value={mMinutes}
+                onChange={e => setMMinutes(e.target.value)}
+                className="bg-gray-50 border-none rounded-xl text-sm h-9 w-20 text-center"
+              />
+              <span className="text-xs text-gray-400 flex-shrink-0">นาที</span>
             </div>
           </div>
           <Button 
