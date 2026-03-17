@@ -188,8 +188,9 @@ function StampTab() {
   const { data: freshUser } = useQuery<{ trashPoints: number; stamps: number; merits: number }>({
     queryKey: ["/api/users", user?.id],
     enabled: !!user?.id,
-    refetchInterval: 5000,
-    staleTime: 0,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+    staleTime: 10000,
   });
 
   useEffect(() => {

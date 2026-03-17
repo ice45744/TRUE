@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type Report } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface SafeUser {
   id: string;
@@ -32,16 +32,21 @@ export default function AdminReports() {
   const { data: reports, isLoading, error } = useQuery<Report[]>({
     queryKey: ["/api/admin/reports"],
     refetchInterval: 10000,
-    staleTime: 0,
+    refetchIntervalInBackground: false,
+    staleTime: 5000,
   });
 
   const { data: users } = useQuery<SafeUser[]>({
     queryKey: ["/api/admin/users"],
-    refetchInterval: 15000,
-    staleTime: 0,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+    staleTime: 20000,
   });
 
-  const userMap = new Map((users ?? []).map(u => [u.id, u]));
+  const userMap = useMemo(
+    () => new Map((users ?? []).map(u => [u.id, u])),
+    [users]
+  );
 
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>

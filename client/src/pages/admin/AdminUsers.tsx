@@ -61,8 +61,9 @@ export default function AdminUsers() {
 
   const { data: users, isLoading, error } = useQuery<SafeUser[]>({
     queryKey: ["/api/admin/users"],
-    refetchInterval: 15000,
-    staleTime: 0,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+    staleTime: 20000,
   });
 
   const deleteMutation = useMutation({

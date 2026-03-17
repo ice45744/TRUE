@@ -37,7 +37,8 @@ export default function ProfilePage() {
   const { data: liveUser } = useQuery<Omit<UserType, "password">>({
     queryKey: ["/api/users", user?.id],
     enabled: !!user?.id,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   });
 
   const displayed = liveUser ?? user;
