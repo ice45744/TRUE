@@ -99,7 +99,7 @@ export default function ProfilePage() {
   const stamps = liveUser?.stamps ?? displayed.stamps;
 
   const meritProgress = merits % 10;
-  const trashProgress = trashPoints % 10;
+  const trashProgress = stamps % 10;
 
   return (
     <div className="pb-24 pt-5 px-4">
@@ -176,7 +176,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-gray-500 flex items-center gap-1"><Recycle size={12} className="text-green-500" /> ขยะ</span>
+              <span className="text-[11px] text-gray-500 flex items-center gap-1"><Recycle size={12} className="text-green-500" /> แสตมป์ขยะ</span>
               <span className="text-[11px] text-gray-400">{trashProgress}/10</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">

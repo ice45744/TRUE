@@ -205,7 +205,8 @@ function StampTab() {
   }, [freshUser]);
 
   const trashPts = freshUser?.trashPoints ?? user?.trashPoints ?? 0;
-  const displayStamps = trashPts % MAX_STAMPS;
+  const totalStamps = freshUser?.stamps ?? user?.stamps ?? 0;
+  const displayStamps = totalStamps % MAX_STAMPS;
 
   const scanMutation = useMutation({
     mutationFn: (token: string) => apiRequest("POST", "/api/qr/scan", { token, userId: user!.id }),
@@ -238,7 +239,10 @@ function StampTab() {
           <h3 className="font-bold text-gray-800 text-sm">บัตรสะสมแสตมป์</h3>
           <span className="text-green-500 font-bold text-sm">{displayStamps}<span className="text-gray-400 font-normal">/{MAX_STAMPS}</span></span>
         </div>
-        <p className="text-xs text-gray-500 mb-4">สแกน QR 1 ครั้ง = 10 แต้ม = 1 แสตมป์</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs text-gray-500">10 แต้มขยะ = 1 แสตมป์ | แสตมป์รวม: <span className="font-semibold text-green-600">{totalStamps}</span></p>
+          <p className="text-xs text-gray-400">♻ {trashPts} แต้ม</p>
+        </div>
         <div className="h-2 bg-gray-100 rounded-full mb-4 overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
