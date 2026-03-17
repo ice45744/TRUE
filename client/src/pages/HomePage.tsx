@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle, Star, Sparkles, ShieldCheck } from "lucide-react";
+import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle, Star, Sparkles, ShieldCheck, X, Megaphone, ZoomIn } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Announcement, User as UserType } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
+import { useState } from "react";
 
 function getInitials(name: string) {
   const parts = name.trim().split(" ");
@@ -28,9 +29,64 @@ const quickActions = [
   { label: "ดูประกาศ", icon: Bell, href: "/announcements", bg: "bg-purple-50", iconColor: "text-purple-500", border: "border border-purple-100" },
 ];
 
+function AnnouncementModal({ ann, onClose }: { ann: Announcement; onClose: () => void }) {
+  const [bigImg, setBigImg] = useState(false);
+  return (
+    <div
+      className="fixed inset-0 z-[999] bg-black/50 flex items-end justify-center animate-in fade-in duration-200"
+      onClick={onClose}>
+      {bigImg && ann.imageUrl && (
+        <div
+          className="fixed inset-0 z-[1000] bg-black/90 flex items-center justify-center p-4"
+          onClick={e => { e.stopPropagation(); setBigImg(false); }}>
+          <img src={ann.imageUrl} alt={ann.title} className="max-w-full max-h-full rounded-2xl object-contain" />
+        </div>
+      )}
+      <div
+        className="bg-white w-full max-w-lg rounded-t-3xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white px-5 pt-5 pb-3 flex items-start justify-between gap-3 border-b border-gray-50">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 flex-shrink-0 flex items-center justify-center border border-orange-100">
+              <Megaphone size={18} className="text-orange-500" />
+            </div>
+            <p className="font-bold text-gray-800 text-sm leading-snug">{ann.title}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 hover:bg-gray-200 transition-colors mt-0.5">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+        {ann.imageUrl && (
+          <div
+            className="relative cursor-zoom-in"
+            onClick={() => setBigImg(true)}>
+            <img
+              src={ann.imageUrl}
+              alt={ann.title}
+              className="w-full object-cover max-h-56"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <div className="absolute bottom-2 right-2 bg-black/40 rounded-full p-1.5">
+              <ZoomIn size={14} className="text-white" />
+            </div>
+          </div>
+        )}
+        <div className="px-5 py-4">
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ann.content}</p>
+          <p className="text-[11px] text-gray-400 mt-4 pt-3 border-t border-gray-50">
+            {ann.authorName} · {formatDate(ann.createdAt)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
+  const [selectedAnn, setSelectedAnn] = useState<Announcement | null>(null);
 
   const { data: liveUser } = useQuery<Omit<UserType, "password">>({
     queryKey: ["/api/users", user?.id],
@@ -156,16 +212,32 @@ export default function HomePage() {
           ) : (
             <div className="divide-y divide-gray-50">
               {recent.map((ann, i) => (
-                <div key={ann.id} className={`p-4 animate-fade-in-up stagger-${i + 1}`}>
-                  <p className="font-semibold text-gray-800 text-sm leading-tight mb-1">{ann.title}</p>
-                  <p className="text-xs text-gray-500 line-clamp-2 mb-2">{ann.content}</p>
-                  <p className="text-[11px] text-gray-400">{formatDate(ann.createdAt)}</p>
-                </div>
+                <button
+                  key={ann.id}
+                  data-testid={`announcement-card-${ann.id}`}
+                  onClick={() => setSelectedAnn(ann)}
+                  className={`w-full text-left p-4 animate-fade-in-up stagger-${i + 1} hover:bg-gray-50 active:bg-gray-100 transition-colors`}>
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-orange-50 flex-shrink-0 flex items-center justify-center border border-orange-100 mt-0.5">
+                      <Megaphone size={16} className="text-orange-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm leading-tight mb-0.5">{ann.title}</p>
+                      <p className="text-xs text-gray-500 line-clamp-2">{ann.content}</p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <p className="text-[11px] text-gray-400">{formatDate(ann.createdAt)}</p>
+                        <span className="text-[11px] text-primary font-medium">อ่านเพิ่ม →</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {selectedAnn && <AnnouncementModal ann={selectedAnn} onClose={() => setSelectedAnn(null)} />}
 
       <div className="px-4 mt-5 animate-fade-in-up stagger-4">
         <div className="grid grid-cols-2 gap-3">
