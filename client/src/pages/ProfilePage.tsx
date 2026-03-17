@@ -1,18 +1,61 @@
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
-import { LogOut, User, Settings, Award, Recycle, ChevronRight, Star } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { LogOut, User, Settings, Award, Recycle, ChevronRight, Star, Camera, Pencil, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { User as UserType } from "@shared/schema";
+
+const IMGBB_KEY = "baf409d03cf4975986f6d44b5a1a2919";
 
 function getInitials(name: string) {
   const parts = name.trim().split(" ");
   return parts.map(p => p[0]).join("").slice(0, 2).toUpperCase();
 }
 
+async function uploadToImgBB(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("image", file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: "POST", body: form });
+  const data = await res.json();
+  if (!data.success) throw new Error("อัปโหลดรูปไม่สำเร็จ");
+  return data.data.url as string;
+}
+
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: liveUser } = useQuery<Omit<UserType, "password">>({
+    queryKey: ["/api/users", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 5000,
+  });
+
+  const displayed = liveUser ?? user;
+
+  const updateMutation = useMutation({
+    mutationFn: async (body: { name?: string; avatarUrl?: string | null }) => {
+      const res = await apiRequest("PATCH", `/api/users/${user!.id}`, body);
+      return res.json();
+    },
+    onSuccess: (updated) => {
+      updateUser({ ...user!, ...updated });
+      toast({ title: "บันทึกเรียบร้อย" });
+      setEditOpen(false);
+    },
+    onError: () => {
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถบันทึกได้", variant: "destructive" });
+    },
+  });
 
   const handleLogout = () => {
     logout();
@@ -20,26 +63,75 @@ export default function ProfilePage() {
     toast({ title: "ออกจากระบบแล้ว", description: "ขอบคุณที่ใช้งาน S.T. ก้าวหน้า" });
   };
 
-  if (!user) return null;
+  const handleOpenEdit = () => {
+    setEditName(displayed?.name ?? "");
+    setEditOpen(true);
+  };
 
-  const initials = getInitials(user.name);
-  const hue = (user.studentId.charCodeAt(0) * 37) % 360;
+  const handleSaveName = () => {
+    if (!editName.trim()) return;
+    updateMutation.mutate({ name: editName.trim() });
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadToImgBB(file);
+      updateMutation.mutate({ avatarUrl: url });
+    } catch {
+      toast({ title: "อัปโหลดรูปไม่สำเร็จ", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  if (!displayed) return null;
+
+  const initials = getInitials(displayed.name);
+  const hue = (displayed.studentId.charCodeAt(0) * 37) % 360;
   const avatarBg = `hsl(${hue}, 70%, 55%)`;
 
-  const meritProgress = user.merits % 10;
-  const trashProgress = user.trashPoints % 10;
+  const merits = liveUser?.merits ?? displayed.merits;
+  const trashPoints = liveUser?.trashPoints ?? displayed.trashPoints;
+  const stamps = liveUser?.stamps ?? displayed.stamps;
+
+  const meritProgress = merits % 10;
+  const trashProgress = trashPoints % 10;
 
   return (
     <div className="pb-24 pt-5 px-4">
       <div className="flex flex-col items-center mb-6 animate-fade-in-up">
-        <div
-          className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-3 animate-bounce-in"
-          style={{ background: `linear-gradient(135deg, ${avatarBg}, hsl(${hue + 30}, 70%, 45%))`, boxShadow: `0 4px 20px hsl(${hue}, 70%, 55%, 0.4)`, border: "4px solid white" }}
-          data-testid="avatar-profile">
-          {initials}
+        <div className="relative mb-3">
+          {displayed.avatarUrl ? (
+            <img
+              src={displayed.avatarUrl}
+              alt={displayed.name}
+              className="w-24 h-24 rounded-full object-cover animate-bounce-in"
+              style={{ border: "4px solid white", boxShadow: `0 4px 20px hsl(${hue}, 70%, 55%, 0.4)` }}
+              data-testid="avatar-profile"
+            />
+          ) : (
+            <div
+              className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold animate-bounce-in"
+              style={{ background: `linear-gradient(135deg, ${avatarBg}, hsl(${hue + 30}, 70%, 45%))`, boxShadow: `0 4px 20px hsl(${hue}, 70%, 55%, 0.4)`, border: "4px solid white" }}
+              data-testid="avatar-profile">
+              {initials}
+            </div>
+          )}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            data-testid="button-change-avatar"
+            className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg border-2 border-white">
+            {uploading ? <Loader2 size={14} className="text-white animate-spin" /> : <Camera size={14} className="text-white" />}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
         </div>
-        <h2 className="text-xl font-bold text-gray-800" data-testid="text-profile-name">{user.name}</h2>
-        <p className="text-sm text-gray-500 mt-0.5">รหัส: {user.studentId}</p>
+        <h2 className="text-xl font-bold text-gray-800" data-testid="text-profile-name">{displayed.name}</h2>
+        <p className="text-sm text-gray-500 mt-0.5">รหัส: {displayed.studentId}</p>
       </div>
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-100 animate-fade-in-up stagger-2" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
@@ -48,21 +140,21 @@ export default function ProfilePage() {
             <div className="w-9 h-9 rounded-full bg-yellow-50 flex items-center justify-center">
               <Award size={18} className="text-yellow-500" />
             </div>
-            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-merits">{user.merits}</p>
+            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-merits">{merits}</p>
             <p className="text-[10px] text-gray-500">แต้มความดี</p>
           </div>
           <div className="flex flex-col items-center gap-1.5 px-2 animate-pop-in stagger-2">
             <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
               <Recycle size={18} className="text-green-500" />
             </div>
-            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-trash">{user.trashPoints}</p>
+            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-trash">{trashPoints}</p>
             <p className="text-[10px] text-gray-500">แต้มขยะ</p>
           </div>
           <div className="flex flex-col items-center gap-1.5 px-2 animate-pop-in stagger-3">
             <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
               <Star size={18} className="text-purple-500" />
             </div>
-            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-stamps">{user.stamps}</p>
+            <p className="text-xl font-bold text-gray-800" data-testid="text-profile-stamps">{stamps}</p>
             <p className="text-[10px] text-gray-500">แสตมป์</p>
           </div>
         </div>
@@ -98,6 +190,7 @@ export default function ProfilePage() {
       <div className="bg-white rounded-2xl border border-gray-100 mb-4 divide-y divide-gray-50 animate-fade-in-up stagger-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
         <button
           data-testid="button-edit-profile"
+          onClick={handleOpenEdit}
           className="w-full flex items-center gap-3 px-4 py-3.5 hover-elevate text-left card-interactive">
           <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
             <User size={16} className="text-blue-500" />
@@ -128,6 +221,61 @@ export default function ProfilePage() {
         S.T. Digital System v1.0.0<br />
         พัฒนาโดยสภานักเรียนโรงเรียน
       </p>
+
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setEditOpen(false)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-md p-6 pb-10" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                <Pencil size={16} className="text-primary" /> แก้ไขข้อมูลส่วนตัว
+              </h3>
+              <button onClick={() => setEditOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center mb-5">
+              <div className="relative mb-2">
+                {displayed.avatarUrl ? (
+                  <img src={displayed.avatarUrl} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-md"
+                    style={{ background: `linear-gradient(135deg, ${avatarBg}, hsl(${hue + 30}, 70%, 45%))` }}>
+                    {initials}
+                  </div>
+                )}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow border-2 border-white">
+                  {uploading ? <Loader2 size={12} className="text-white animate-spin" /> : <Camera size={12} className="text-white" />}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400">แตะกล้องเพื่อเปลี่ยนรูปโปรไฟล์</p>
+            </div>
+
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">ชื่อ-นามสกุล</label>
+            <input
+              data-testid="input-edit-name"
+              type="text"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSaveName()}
+              placeholder="กรอกชื่อของคุณ"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30 mb-4"
+            />
+
+            <Button
+              data-testid="button-save-name"
+              onClick={handleSaveName}
+              disabled={updateMutation.isPending || !editName.trim()}
+              className="w-full rounded-xl py-3 flex items-center justify-center gap-2">
+              {updateMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+              บันทึก
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

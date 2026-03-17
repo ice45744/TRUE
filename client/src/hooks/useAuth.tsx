@@ -10,6 +10,7 @@ interface AuthUser {
   merits: number;
   trashPoints: number;
   stamps: number;
+  avatarUrl?: string | null;
 }
 
 interface AuthContextType {
