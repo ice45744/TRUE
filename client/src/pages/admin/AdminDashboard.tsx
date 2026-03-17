@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Clock, ChevronRight, LayoutDashboard, LogOut, QrCode, Star, Settings, ShieldOff } from "lucide-react";
+import { Users, ClipboardList, Megaphone, AlertTriangle, Award, Clock, ChevronRight, LayoutDashboard, LogOut, QrCode, Star, Settings, ShieldOff, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -30,6 +30,7 @@ const menuItems = [
   { label: "จัดการประกาศ", href: "/admin/announcements", icon: Megaphone, bg: "bg-orange-50", iconColor: "text-orange-500", border: "border-orange-100" },
   { label: "ดูรายงานปัญหา", href: "/admin/reports", icon: AlertTriangle, bg: "bg-red-50", iconColor: "text-red-500", border: "border-red-100" },
   { label: "สร้าง QR Code", href: "/admin/qr", icon: QrCode, bg: "bg-purple-50", iconColor: "text-purple-500", border: "border-purple-100" },
+  { label: "คู่มือการใช้งาน", href: "/manual", icon: BookOpen, bg: "bg-indigo-50", iconColor: "text-indigo-500", border: "border-indigo-100" },
 ];
 
 export default function AdminDashboard() {

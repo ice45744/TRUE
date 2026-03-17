@@ -94,9 +94,42 @@ function MaintenanceOverlay() {
         </div>
       </div>
 
-      <a href="/auth" className="mt-10 text-xs text-gray-300 hover:text-gray-400 transition-colors underline underline-offset-2">
+      <button
+        onClick={() => { setShowAdminBox(true); setCodeError(false); setAdminCode(""); }}
+        className="mt-10 text-xs text-gray-300 hover:text-gray-400 transition-colors underline underline-offset-2">
         สำหรับเจ้าหน้าที่เท่านั้น
-      </a>
+      </button>
+
+      {showAdminBox && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-6 bg-black/40" onClick={() => setShowAdminBox(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-xs p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-gray-800 mb-1">เข้าสู่ระบบเจ้าหน้าที่</h3>
+            <p className="text-xs text-gray-400 mb-4">กรุณากรอกรหัสสภานักเรียนเพื่อดำเนินการต่อ</p>
+            <input
+              type="password"
+              autoFocus
+              placeholder="รหัสสภานักเรียน"
+              value={adminCode}
+              onChange={e => { setAdminCode(e.target.value); setCodeError(false); }}
+              onKeyDown={e => e.key === "Enter" && handleAdminCodeSubmit()}
+              className={`w-full border rounded-xl px-4 py-3 text-sm mb-2 focus:outline-none focus:ring-2 ${codeError ? "border-red-300 focus:ring-red-200 bg-red-50" : "border-gray-200 focus:ring-indigo-200"}`}
+            />
+            {codeError && <p className="text-xs text-red-500 mb-2">รหัสไม่ถูกต้อง กรุณาลองใหม่</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAdminBox(false)}
+                className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 font-medium">
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleAdminCodeSubmit}
+                className="flex-1 bg-indigo-600 rounded-xl py-2.5 text-sm text-white font-semibold">
+                ยืนยัน
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -113,6 +146,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminActivities from "@/pages/admin/AdminActivities";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminReports from "@/pages/admin/AdminReports";
+import ManualPage from "@/pages/ManualPage";
 import AdminRewards from "@/pages/admin/AdminRewards";
 
 function NotFound() {
@@ -184,6 +218,7 @@ function AppShell() {
           <Route path="/admin/reports" component={() => <AdminRoute component={AdminReports} />} />
           <Route path="/admin/qr" component={() => <AdminRoute component={QrGeneratorPage} />} />
           <Route path="/admin/rewards" component={() => <AdminRoute component={AdminRewards} />} />
+          <Route path="/manual" component={() => <ProtectedRoute component={ManualPage} />} />
           <Route component={NotFound} />
         </Switch>
         {user && !isAuth && !isAdminPage && <StudentBottomNav />}

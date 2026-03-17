@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { LogOut, User, Settings, Award, Recycle, ChevronRight, Star, Camera, Pencil, X, Check, Loader2 } from "lucide-react";
+import { LogOut, User, Settings, Award, Recycle, ChevronRight, Star, Camera, Pencil, X, Check, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -197,6 +197,16 @@ export default function ProfilePage() {
             <User size={16} className="text-blue-500" />
           </div>
           <span className="flex-1 text-sm font-medium text-gray-700">แก้ไขข้อมูลส่วนตัว</span>
+          <ChevronRight size={16} className="text-gray-400" />
+        </button>
+        <button
+          data-testid="button-manual"
+          onClick={() => setLocation("/manual")}
+          className="w-full flex items-center gap-3 px-4 py-3.5 hover-elevate text-left card-interactive">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+            <BookOpen size={16} className="text-indigo-500" />
+          </div>
+          <span className="flex-1 text-sm font-medium text-gray-700">คู่มือการใช้งาน</span>
           <ChevronRight size={16} className="text-gray-400" />
         </button>
         <button
