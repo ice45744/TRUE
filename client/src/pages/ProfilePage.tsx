@@ -99,7 +99,8 @@ export default function ProfilePage() {
   const stamps = liveUser?.stamps ?? displayed.stamps;
 
   const meritProgress = merits % 10;
-  const trashProgress = stamps % 10;
+  const trashRemainder = stamps % 10;
+  const trashProgress = trashRemainder === 0 && stamps > 0 ? 10 : trashRemainder;
 
   return (
     <div className="pb-24 pt-5 px-4">

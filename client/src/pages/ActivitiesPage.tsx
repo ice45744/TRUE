@@ -206,7 +206,8 @@ function StampTab() {
 
   const trashPts = freshUser?.trashPoints ?? user?.trashPoints ?? 0;
   const totalStamps = freshUser?.stamps ?? user?.stamps ?? 0;
-  const displayStamps = totalStamps % MAX_STAMPS;
+  const remainder = totalStamps % MAX_STAMPS;
+  const displayStamps = remainder === 0 && totalStamps > 0 ? MAX_STAMPS : remainder;
 
   const scanMutation = useMutation({
     mutationFn: (token: string) => apiRequest("POST", "/api/qr/scan", { token, userId: user!.id }),
