@@ -322,9 +322,16 @@ function RewardsTab() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {[1,2,3].map(i => (
-            <div key={i} className="bg-white rounded-2xl h-20 animate-pulse border border-gray-100" />
+        <div className="grid grid-cols-2 gap-3">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="bg-white rounded-2xl overflow-hidden animate-pulse border border-gray-100">
+              <div className="h-32 bg-gray-100" />
+              <div className="p-3 space-y-2">
+                <div className="h-3 bg-gray-100 rounded-full w-3/4" />
+                <div className="h-3 bg-gray-100 rounded-full w-1/2" />
+                <div className="h-7 bg-gray-100 rounded-xl" />
+              </div>
+            </div>
           ))}
         </div>
       ) : (rewards ?? []).length === 0 ? (
@@ -334,57 +341,58 @@ function RewardsTab() {
           <p className="text-xs mt-1">รอการเพิ่มของรางวัลจากสภานักเรียน</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {(rewards ?? []).map(r => {
+        <div className="grid grid-cols-2 gap-3">
+          {(rewards ?? []).map((r, i) => {
             const canRedeem = (user?.trashPoints ?? 0) >= r.stampCost && r.stock !== 0;
+            const soldOut = r.stock === 0;
             return (
               <div key={r.id}
                 data-testid={`reward-item-${r.id}`}
-                className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in-up"
-                style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-                {r.imageUrl && (
-                  <div className="w-full rounded-xl overflow-hidden mb-3 -mx-0">
-                    <img
-                      src={r.imageUrl}
-                      alt={r.title}
-                      className="w-full h-36 object-cover rounded-xl" />
+                className={`bg-white rounded-2xl overflow-hidden border flex flex-col animate-fade-in-up stagger-${(i % 4) + 1} ${soldOut ? "border-gray-100 opacity-70" : "border-gray-100"}`}
+                style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+                {r.imageUrl ? (
+                  <div className="relative">
+                    <img src={r.imageUrl} alt={r.title} className="w-full h-32 object-cover" />
+                    {soldOut && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold bg-red-500 px-2 py-0.5 rounded-full">หมดแล้ว</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-32 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative">
+                    <Gift size={36} className="text-green-400" />
+                    {soldOut && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold bg-red-500 px-2 py-0.5 rounded-full">หมดแล้ว</span>
+                      </div>
+                    )}
                   </div>
                 )}
-                <div className="flex items-start gap-3">
-                  {!r.imageUrl && (
-                    <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <Gift size={18} className="text-green-600" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-sm">{r.title}</p>
-                    {r.description && <p className="text-xs text-gray-400 mt-0.5">{r.description}</p>}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-green-600 font-bold">♻ {r.stampCost} แต้มขยะ</span>
-                      {r.stock >= 0 && (
-                        <span className={`text-xs ${r.stock === 0 ? "text-red-400" : "text-gray-400"}`}>
-                          {r.stock === 0 ? "หมดแล้ว" : `เหลือ ${r.stock} ชิ้น`}
-                        </span>
-                      )}
-                    </div>
+                <div className="p-3 flex flex-col flex-1 gap-1.5">
+                  <p className="font-bold text-gray-800 text-xs leading-tight line-clamp-2">{r.title}</p>
+                  {r.description && <p className="text-[10px] text-gray-400 line-clamp-1">{r.description}</p>}
+                  <div className="flex items-center justify-between mt-auto pt-1">
+                    <span className="text-xs font-bold text-green-600">♻ {r.stampCost}</span>
+                    {r.stock > 0 && <span className="text-[10px] text-gray-400">เหลือ {r.stock}</span>}
                   </div>
+                  <Button
+                    data-testid={`button-redeem-${r.id}`}
+                    className={`w-full rounded-xl h-8 text-xs font-semibold mt-1 ${
+                      canRedeem
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    }`}
+                    disabled={!canRedeem || redeemMutation.isPending}
+                    onClick={() => {
+                      if (!canRedeem) return;
+                      if (confirm(`ยืนยันแลกรับ "${r.title}" ใช้ ${r.stampCost} แต้มขยะ?`)) {
+                        redeemMutation.mutate(r.id);
+                      }
+                    }}>
+                    {soldOut ? "หมดแล้ว" : !canRedeem ? "แต้มไม่พอ" : "แลกรับ"}
+                  </Button>
                 </div>
-                <Button
-                  data-testid={`button-redeem-${r.id}`}
-                  className={`w-full mt-3 rounded-xl h-9 text-sm font-semibold ${
-                    canRedeem
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  }`}
-                  disabled={!canRedeem || redeemMutation.isPending}
-                  onClick={() => {
-                    if (!canRedeem) return;
-                    if (confirm(`ยืนยันแลกรับ "${r.title}" ใช้ ${r.stampCost} แต้มขยะ?`)) {
-                      redeemMutation.mutate(r.id);
-                    }
-                  }}>
-                  {r.stock === 0 ? "หมดแล้ว" : !canRedeem ? `แต้มขยะไม่พอ (ต้องการ ${r.stampCost})` : "แลกรับ"}
-                </Button>
               </div>
             );
           })}
