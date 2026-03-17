@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings, Gift } from "lucide-react";
+import { Home, ClipboardList, Megaphone, AlertTriangle, User, LayoutDashboard, Users, ShieldCheck, Clock, Settings, Gift, House } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SystemSettings } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -237,7 +237,6 @@ function AdminBottomNav() {
     { href: "/admin/users", label: "นักเรียน", icon: Users },
     { href: "/admin/activities", label: "กิจกรรม", icon: ClipboardList },
     { href: "/admin/rewards", label: "ของรางวัล", icon: Gift },
-    { href: "/profile", label: "โปรไฟล์", icon: User },
   ];
 
   return (
@@ -245,7 +244,7 @@ function AdminBottomNav() {
       style={{ boxShadow: "0 -2px 16px rgba(0,0,0,0.06)" }}>
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {tabs.map(({ href, label, icon: Icon }) => {
-          const isExact = href === "/admin" || href === "/";
+          const isExact = href === "/admin";
           const active = isExact ? location === href : location.startsWith(href);
           return (
             <Link key={href} href={href}
@@ -261,6 +260,15 @@ function AdminBottomNav() {
             </Link>
           );
         })}
+        <Link href="/"
+          data-testid="admin-nav-exit"
+          className="flex flex-col items-center gap-0.5 py-2 px-3 flex-1 transition-colors duration-200 text-rose-400 hover:text-rose-500">
+          <div className="transition-transform duration-200">
+            <House size={22} strokeWidth={1.8} />
+          </div>
+          <span className="text-[10px] font-medium">ออก Admin</span>
+          <div className="nav-dot" />
+        </Link>
       </div>
     </nav>
   );
