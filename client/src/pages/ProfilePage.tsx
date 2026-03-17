@@ -200,11 +200,15 @@ export default function ProfilePage() {
         </button>
         <button
           data-testid="button-settings"
+          onClick={() => toast({ title: "🚧 เร็วๆ นี้", description: "ฟีเจอร์ตั้งค่าระบบกำลังพัฒนา รอติดตามการอัพเดทได้เลย!" })}
           className="w-full flex items-center gap-3 px-4 py-3.5 hover-elevate text-left card-interactive">
           <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
             <Settings size={16} className="text-gray-500" />
           </div>
-          <span className="flex-1 text-sm font-medium text-gray-700">ตั้งค่าระบบ</span>
+          <div className="flex-1">
+            <span className="text-sm font-medium text-gray-700">ตั้งค่าระบบ</span>
+            <span className="ml-2 text-[10px] bg-gray-100 text-gray-400 rounded-full px-2 py-0.5 font-medium">เร็วๆ นี้</span>
+          </div>
           <ChevronRight size={16} className="text-gray-400" />
         </button>
       </div>

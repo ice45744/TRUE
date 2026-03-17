@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle, Star, Sparkles, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Announcement } from "@shared/schema";
+import type { Announcement, User as UserType } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
 
@@ -29,6 +30,15 @@ const quickActions = [
 
 export default function HomePage() {
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
+
+  const { data: liveUser } = useQuery<Omit<UserType, "password">>({
+    queryKey: ["/api/users", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 5000,
+  });
+
+  const displayed = liveUser ?? user;
 
   const { data: announcements, isLoading } = useQuery<Announcement[]>({
     queryKey: ["/api/announcements"],
@@ -57,12 +67,20 @@ export default function HomePage() {
         <div className="relative px-5 pt-12 pb-8 flex items-start justify-between">
           <div className="animate-fade-in-up">
             <p className="text-blue-100 text-sm font-medium mb-1">{greeting()} 👋</p>
-            <h2 className="text-white text-xl font-bold leading-tight" data-testid="text-username">{user?.name}</h2>
-            <p className="text-blue-200 text-sm mt-1">รหัสนักเรียน: {user?.studentId}</p>
+            <h2 className="text-white text-xl font-bold leading-tight" data-testid="text-username">{displayed?.name}</h2>
+            <p className="text-blue-200 text-sm mt-1">รหัสนักเรียน: {displayed?.studentId}</p>
           </div>
-          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 animate-bounce-in stagger-2">
-            <span className="text-white font-bold text-lg">{getInitials(user?.name ?? "")}</span>
-          </div>
+          <Link href="/profile">
+            <div className="w-12 h-12 rounded-full border-2 border-white/60 animate-bounce-in stagger-2 overflow-hidden flex-shrink-0 cursor-pointer">
+              {displayed?.avatarUrl ? (
+                <img src={displayed.avatarUrl} alt={displayed.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-white/20 flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">{getInitials(displayed?.name ?? "")}</span>
+                </div>
+              )}
+            </div>
+          </Link>
         </div>
 
         <div className="relative px-5 pb-6 animate-fade-in-up stagger-2">
@@ -70,7 +88,7 @@ export default function HomePage() {
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-1">
                 <Award size={14} className="text-yellow-300" />
-                <span className="text-white font-bold text-lg" data-testid="stat-home-merits">{user?.merits ?? 0}</span>
+                <span className="text-white font-bold text-lg" data-testid="stat-home-merits">{displayed?.merits ?? 0}</span>
               </div>
               <span className="text-blue-200 text-[10px]">ความดี</span>
             </div>
@@ -78,7 +96,7 @@ export default function HomePage() {
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-1">
                 <Recycle size={14} className="text-green-300" />
-                <span className="text-white font-bold text-lg" data-testid="stat-home-trash">{user?.trashPoints ?? 0}</span>
+                <span className="text-white font-bold text-lg" data-testid="stat-home-trash">{displayed?.trashPoints ?? 0}</span>
               </div>
               <span className="text-blue-200 text-[10px]">แต้มขยะ</span>
             </div>
@@ -86,7 +104,7 @@ export default function HomePage() {
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-1">
                 <Star size={14} className="text-purple-300" />
-                <span className="text-white font-bold text-lg" data-testid="stat-home-stamps">{user?.stamps ?? 0}</span>
+                <span className="text-white font-bold text-lg" data-testid="stat-home-stamps">{displayed?.stamps ?? 0}</span>
               </div>
               <span className="text-blue-200 text-[10px]">แสตมป์</span>
             </div>
