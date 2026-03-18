@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SystemSettings } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
 import morningRaysSrc from "@/assets/morning_rays.mp3";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function MaintenanceOverlay() {
   const { isAdmin } = useAuth();
@@ -353,6 +354,7 @@ function App() {
           <MaintenanceOverlay />
           <AppShell />
           <Toaster />
+          <SpeedInsights />
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
