@@ -153,12 +153,13 @@ export async function registerRoutes(
       return res.status(404).json({ message: "QR Code ไม่ถูกต้องหรือหมดอายุ" });
     }
 
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour < 6 || hour >= 8) {
+      return res.status(403).json({ message: "QR Code ใช้ได้เฉพาะเวลา 06:00 - 08:00 น. เท่านั้น" });
+    }
+
     if (qr.type === "checkin") {
-      const now = new Date();
-      const hour = now.getHours();
-      if (hour < 6 || hour >= 8) {
-        return res.status(403).json({ message: "QR เช็คชื่อใช้ได้เฉพาะเวลา 06:00 - 08:00 น. เท่านั้น" });
-      }
       const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
       const dailyKey = `${userId}_${today}`;
       if (qr.usedBy.has(dailyKey)) {
@@ -176,7 +177,6 @@ export async function registerRoutes(
     }
 
     if (qr.type === "checkin") {
-      const now = new Date();
       const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
       const dailyKey = `${userId}_${today}`;
       await storage.markQrUsed(token, dailyKey);

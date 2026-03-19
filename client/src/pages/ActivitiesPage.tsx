@@ -15,6 +15,11 @@ import { th } from "date-fns/locale";
 
 const MAX_STAMPS = 10;
 
+function isWithinScanTime(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 6 && hour < 8;
+}
+
 function GoodnesTab() {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
@@ -119,7 +124,13 @@ function GoodnesTab() {
           data-testid="button-checkin-scan"
           className="w-full rounded-xl h-11 font-semibold text-sm relative overflow-hidden"
           style={{ background: "linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)", color: "white" }}
-          onClick={() => setShowScanner(true)}
+          onClick={() => {
+            if (!isWithinScanTime()) {
+              toast({ title: "ไม่อยู่ในช่วงเวลาที่กำหนด", description: "QR เช็คชื่อใช้ได้เฉพาะเวลา 06:00 - 08:00 น. เท่านั้น", variant: "destructive" });
+              return;
+            }
+            setShowScanner(true);
+          }}
           disabled={scanMutation.isPending}>
           <QrCode size={16} className="mr-2" />
           {scanMutation.isPending ? (
@@ -267,7 +278,13 @@ function StampTab() {
         <Button
           data-testid="button-scan-stamp"
           className="w-full rounded-xl h-11 font-semibold text-sm bg-gray-900"
-          onClick={() => setShowScanner(true)}
+          onClick={() => {
+            if (!isWithinScanTime()) {
+              toast({ title: "ไม่อยู่ในช่วงเวลาที่กำหนด", description: "QR แสตมป์ขยะใช้ได้เฉพาะเวลา 06:00 - 08:00 น. เท่านั้น", variant: "destructive" });
+              return;
+            }
+            setShowScanner(true);
+          }}
           disabled={scanMutation.isPending}>
           <QrCode size={16} className="mr-2" />
           {scanMutation.isPending ? (
