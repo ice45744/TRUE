@@ -14,6 +14,35 @@ function formatDate(date: string | Date) {
   }
 }
 
+const URL_SPLIT_REGEX = /(https?:\/\/[^\s<>"']+)/g;
+const URL_TEST_REGEX = /^https?:\/\/[^\s<>"']+$/;
+
+function renderContent(text: string) {
+  return text.split("\n").map((line, lineIdx) => {
+    const parts = line.split(URL_SPLIT_REGEX);
+    return (
+      <span key={lineIdx}>
+        {parts.map((part, i) =>
+          URL_TEST_REGEX.test(part) ? (
+            <a
+              key={i}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="text-blue-500 underline underline-offset-2 break-all hover:text-blue-700 transition-colors">
+              {part}
+            </a>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        )}
+        {lineIdx < text.split("\n").length - 1 && <br />}
+      </span>
+    );
+  });
+}
+
 function AnnouncementCard({ ann, index }: { ann: Announcement; index: number }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedImage, setExpandedImage] = useState(false);
@@ -51,7 +80,7 @@ function AnnouncementCard({ ann, index }: { ann: Announcement; index: number }) 
               <p className="font-bold text-gray-800 text-sm leading-tight">{ann.title}</p>
               <div className={`overflow-hidden transition-all duration-300 ${expanded ? "max-h-96" : "max-h-10"}`}>
                 <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                  {ann.content}
+                  {renderContent(ann.content)}
                 </p>
               </div>
               <div className="flex items-center justify-between mt-2">
