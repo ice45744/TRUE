@@ -3,6 +3,22 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { loginSchema, insertUserSchema, insertActivitySchema, insertReportSchema, insertAnnouncementSchema, insertSystemSettingsSchema, insertRewardSchema, updateProfileSchema } from "../shared/schema.js";
 import { log } from "./index.js";
+import {
+  notifyReportStatus,
+  notifyAnnouncementCreated,
+  notifyAnnouncementDeleted,
+  notifyNewRegistration,
+  notifyAdminAction,
+  notifyRedemption,
+  notifyQrCheckin,
+} from "./discord.js";
+import type { User } from "../shared/schema.js";
+
+declare module "express-serve-static-core" {
+  interface Request {
+    adminUser?: User;
+  }
+}
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const userId = req.headers["x-user-id"] as string;
@@ -16,6 +32,7 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (user.role !== "admin") {
     return res.status(403).json({ message: "ไม่มีสิทธิ์เข้าถึง" });
   }
+  req.adminUser = user;
   next();
 }
 
@@ -49,6 +66,13 @@ export async function registerRoutes(
     }
     const user = await storage.createUser(result.data);
     const { password: _, ...safeUser } = user;
+
+    notifyNewRegistration({
+      name: user.name,
+      studentId: user.studentId,
+      schoolCode: user.schoolCode,
+    });
+
     res.status(201).json({ user: safeUser });
   });
 
@@ -94,6 +118,16 @@ export async function registerRoutes(
         return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
       }
       const settings = await storage.updateSystemSettings(result.data);
+
+      const admin = req.adminUser!;
+      const modeText = result.data.maintenanceMode === 1 ? "เปิด Maintenance Mode" : "ปิด Maintenance Mode";
+      notifyAdminAction({
+        action: "อัปเดตตั้งค่าระบบ",
+        detail: modeText,
+        adminName: admin.name,
+        adminStudentId: admin.studentId,
+      });
+
       res.json(settings);
     } catch (error: any) {
       log(`Error updating settings: ${error.message}`);
@@ -113,12 +147,43 @@ export async function registerRoutes(
       return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
     }
     const ann = await storage.createAnnouncement(result.data);
+
+    const admin = req.adminUser!;
+    notifyAnnouncementCreated({
+      title: ann.title,
+      content: ann.content,
+      authorName: ann.authorName,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+    notifyAdminAction({
+      action: "สร้างประกาศ",
+      detail: `หัวข้อ: "${ann.title}"`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     res.status(201).json(ann);
   });
 
   app.delete("/api/announcements/:id", requireAdmin, async (req, res) => {
+    const ann = await storage.getAnnouncement(req.params.id);
     const success = await storage.deleteAnnouncement(req.params.id);
     if (!success) return res.status(404).json({ message: "ไม่พบประกาศ" });
+
+    const admin = req.adminUser!;
+    notifyAnnouncementDeleted({
+      title: ann?.title ?? req.params.id,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+    notifyAdminAction({
+      action: "ลบประกาศ",
+      detail: `หัวข้อ: "${ann?.title ?? req.params.id}"`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     res.json({ message: "ลบประกาศสำเร็จ" });
   });
 
@@ -129,6 +194,16 @@ export async function registerRoutes(
       return res.status(400).json({ message: "ประเภท QR ไม่ถูกต้อง" });
     }
     const qr = await storage.createQrToken(type, type === "stamp" ? (expiryMinutes ?? 5) : null);
+
+    const admin = req.adminUser!;
+    const typeLabel = type === "checkin" ? "QR เช็คชื่อ" : "QR แสตมป์ขยะ";
+    notifyAdminAction({
+      action: "สร้าง QR Code",
+      detail: `ประเภท: ${typeLabel}`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     res.json({
       token: qr.token,
       type: qr.type,
@@ -180,10 +255,16 @@ export async function registerRoutes(
       const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
       const dailyKey = `${userId}_${today}`;
       await storage.markQrUsed(token, dailyKey);
-      // เช็คชื่อ = ได้แต้มทันที (ไม่ต้องรอ admin)
       await storage.createActivity(userId, { type: "checkin", description: "เช็คชื่อผ่าน QR Code (+1 แต้มความดี)" });
       const updated = await storage.updateUserMerits(userId, 1);
       const { password: _, ...safeUser } = updated!;
+
+      notifyQrCheckin({
+        studentName: user.name,
+        studentId: user.studentId,
+        totalMerits: updated!.merits,
+      });
+
       res.json({
         message: `เช็คชื่อสำเร็จ! ได้รับ 1 แต้มความดี (รวม ${updated!.merits} แต้ม)`,
         user: safeUser,
@@ -194,7 +275,6 @@ export async function registerRoutes(
       if (!success) {
         return res.status(409).json({ message: "คุณได้สแกน QR Code นี้ไปแล้ว" });
       }
-      // แสตมป์ขยะ = ได้แต้มทันที (ไม่ต้องรอ admin)
       await storage.createActivity(userId, { type: "stamp", description: "รับแต้มขยะผ่าน QR Code (+10 แต้มขยะ = 1 แสตมป์)" });
       const updated = await storage.updateUserTrashPoints(userId, 10);
       const { password: _, ...safeUser } = updated!;
@@ -206,7 +286,7 @@ export async function registerRoutes(
     }
   });
 
-  // Activities - กิจกรรมความดีต้องรอ Admin อนุมัติก่อนถึงจะได้คะแนน
+  // Activities
   app.get("/api/activities/:userId", async (req, res) => {
     const acts = await storage.getActivities(req.params.userId);
     res.json(acts);
@@ -222,7 +302,6 @@ export async function registerRoutes(
       const user = await storage.getUser(req.params.userId);
       if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
 
-      // สร้างกิจกรรม แต่ยังไม่ให้คะแนน - รอ Admin อนุมัติก่อน
       const act = await storage.createActivity(req.params.userId, result.data);
       const { password: _, ...safeUser } = user;
       log(`Activity created (pending approval) for ${req.params.userId}`);
@@ -262,8 +341,20 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    const target = await storage.getUser(req.params.id);
     const success = await storage.deleteUser(req.params.id);
     if (!success) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+
+    const admin = req.adminUser!;
+    notifyAdminAction({
+      action: "ลบผู้ใช้",
+      detail: target
+        ? `ลบ: ${target.name} (รหัส: ${target.studentId})`
+        : `ลบ user ID: ${req.params.id}`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     res.json({ message: "ลบผู้ใช้สำเร็จ" });
   });
 
@@ -281,11 +372,21 @@ export async function registerRoutes(
     const act = await storage.updateActivityStatus(req.params.id, status);
     if (!act) return res.status(404).json({ message: "ไม่พบกิจกรรม" });
 
-    // ให้คะแนนเมื่ออนุมัติกิจกรรมความดีเท่านั้น (ไม่รวม checkin และ stamp ที่ได้ไปแล้ว)
     if (status === "approved" && act.type === "goodness") {
       await storage.updateUserMerits(act.userId, 1);
       log(`Awarded 1 merit to user ${act.userId} for approved goodness activity ${act.id}`);
     }
+
+    const admin = req.adminUser!;
+    const statusLabel = status === "approved" ? "✅ อนุมัติ" : "❌ ปฏิเสธ";
+    const targetUser = await storage.getUser(act.userId);
+    notifyAdminAction({
+      action: `${statusLabel}กิจกรรมความดี`,
+      detail: `กิจกรรม: "${act.description.slice(0, 100)}"\nนักเรียน: ${targetUser?.name ?? act.userId} (${targetUser?.studentId ?? "-"})`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+      color: status === "approved" ? 0x22C55E : 0xEF4444,
+    });
 
     res.json(act);
   });
@@ -302,6 +403,26 @@ export async function registerRoutes(
     }
     const rpt = await storage.updateReportStatus(req.params.id, status);
     if (!rpt) return res.status(404).json({ message: "ไม่พบรายงาน" });
+
+    const admin = req.adminUser!;
+    const reporter = await storage.getUser(rpt.userId);
+    notifyReportStatus({
+      reportId: rpt.id,
+      category: rpt.category,
+      details: rpt.details,
+      studentName: reporter?.name ?? rpt.userId,
+      studentId: reporter?.studentId ?? "-",
+      newStatus: status,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+    notifyAdminAction({
+      action: "อัปเดตสถานะรายงาน",
+      detail: `รายงาน: "${rpt.category}" → ${status}\nนักเรียน: ${reporter?.name ?? rpt.userId} (${reporter?.studentId ?? "-"})`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     res.json(rpt);
   });
 
@@ -325,6 +446,16 @@ export async function registerRoutes(
   app.delete("/api/admin/clear-all", requireAdmin, async (_req, res) => {
     try {
       await storage.clearAllData();
+
+      const admin = req.adminUser!;
+      notifyAdminAction({
+        action: "⚠️ ลบข้อมูลทั้งหมด",
+        detail: "ดำเนินการล้างข้อมูลทั้งหมดในระบบ",
+        adminName: admin.name,
+        adminStudentId: admin.studentId,
+        color: 0xEF4444,
+      });
+
       res.json({ message: "ลบข้อมูลทั้งหมดเรียบร้อย" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -341,11 +472,20 @@ export async function registerRoutes(
     if (!user) return res.status(404).json({ message: "ไม่พบนักเรียนที่มีรหัสนี้" });
     const updated = await storage.updateUserTrashPoints(user.id, Number(amount));
     await storage.createActivity(user.id, { type: "stamp", description: `Admin เพิ่มแต้มขยะ +${amount} แต้ม (${Math.floor(Number(amount) / 10)} แสตมป์)` });
+
+    const admin = req.adminUser!;
+    notifyAdminAction({
+      action: "เพิ่มแต้มขยะ (Manual)",
+      detail: `นักเรียน: ${user.name} (${user.studentId})\nแต้มที่เพิ่ม: +${amount} แต้ม`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     const { password: _, ...safeUser } = updated!;
     res.json({ message: `เพิ่ม ${amount} แต้มขยะให้ ${user.name} สำเร็จ`, user: safeUser });
   });
 
-  // Rewards - ของรางวัล
+  // Rewards
   app.get("/api/rewards", async (_req, res) => {
     const list = await storage.getRewards();
     res.json(list);
@@ -357,20 +497,51 @@ export async function registerRoutes(
       return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
     }
     const reward = await storage.createReward(result.data);
+
+    const admin = req.adminUser!;
+    notifyAdminAction({
+      action: "เพิ่มของรางวัล",
+      detail: `รางวัล: "${reward.title}"\nราคา: ${reward.stampCost} แต้มขยะ\nจำนวน: ${reward.stock === -1 ? "ไม่จำกัด" : reward.stock}`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     res.json(reward);
   });
 
   app.delete("/api/rewards/:id", requireAdmin, async (req, res) => {
+    const rewards = await storage.getRewards();
+    const reward = rewards.find(r => r.id === req.params.id);
     const ok = await storage.deleteReward(req.params.id);
     if (!ok) return res.status(404).json({ message: "ไม่พบของรางวัล" });
+
+    const admin = req.adminUser!;
+    notifyAdminAction({
+      action: "ลบของรางวัล",
+      detail: `รางวัล: "${reward?.title ?? req.params.id}"`,
+      adminName: admin.name,
+      adminStudentId: admin.studentId,
+    });
+
     res.json({ message: "ลบของรางวัลสำเร็จ" });
   });
 
   app.post("/api/rewards/:id/redeem", async (req, res) => {
     const userId = req.headers["x-user-id"] as string;
     if (!userId) return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ" });
+    const rewards = await storage.getRewards();
+    const reward = rewards.find(r => r.id === req.params.id);
     const result = await storage.createRedemption(userId, req.params.id);
     if (!result.ok) return res.status(400).json({ message: result.message });
+
+    notifyRedemption({
+      studentName: result.user!.name,
+      studentId: result.user!.studentId,
+      rewardTitle: reward?.title ?? req.params.id,
+      stampCost: reward?.stampCost ?? 0,
+      remainingPoints: result.user!.trashPoints,
+    });
+
     const { password: _, ...safeUser } = result.user!;
     res.json({ message: result.message, user: safeUser, redemption: result.redemption });
   });
