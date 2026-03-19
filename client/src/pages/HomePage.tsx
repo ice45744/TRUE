@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle, Star, Sparkles, ShieldCheck, X, Megaphone, ZoomIn } from "lucide-react";
+import { Bell, ChevronRight, ClipboardList, AlertTriangle, BookOpen, Award, Recycle, Star, Sparkles, ShieldCheck, X, Megaphone, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Announcement, User as UserType } from "@shared/schema";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { th } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function getInitials(name: string) {
   const parts = name.trim().split(" ");
@@ -22,6 +22,44 @@ function formatDate(date: string | Date) {
   }
 }
 
+function formatFullDate(date: string | Date) {
+  try {
+    return format(new Date(date), "d MMMM yyyy · HH:mm น.", { locale: th });
+  } catch {
+    return "";
+  }
+}
+
+const URL_SPLIT_REGEX = /(https?:\/\/[^\s<>"']+)/g;
+const URL_TEST_REGEX = /^https?:\/\/[^\s<>"']+$/;
+
+function renderContent(text: string) {
+  return text.split("\n").map((line, lineIdx) => {
+    const parts = line.split(URL_SPLIT_REGEX);
+    return (
+      <span key={lineIdx}>
+        {parts.map((part, i) =>
+          URL_TEST_REGEX.test(part) ? (
+            <a
+              key={i}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="text-blue-500 underline underline-offset-2 break-all hover:text-blue-700 transition-colors inline-flex items-center gap-0.5">
+              {part}
+              <ExternalLink size={11} className="flex-shrink-0 ml-0.5" />
+            </a>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        )}
+        {lineIdx < text.split("\n").length - 1 && <br />}
+      </span>
+    );
+  });
+}
+
 const quickActions = [
   { label: "บันทึกกิจกรรม", icon: ClipboardList, href: "/activities", bg: "bg-blue-50", iconColor: "text-blue-500", border: "border border-blue-100" },
   { label: "แจ้งเรื่องร้องเรียน", icon: AlertTriangle, href: "/report", bg: "bg-orange-50", iconColor: "text-orange-500", border: "border border-orange-100" },
@@ -30,52 +68,62 @@ const quickActions = [
 ];
 
 function AnnouncementModal({ ann, onClose }: { ann: Announcement; onClose: () => void }) {
-  const [bigImg, setBigImg] = useState(false);
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-[999] bg-black/50 flex items-end justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
       onClick={onClose}>
-      {bigImg && ann.imageUrl && (
-        <div
-          className="fixed inset-0 z-[1000] bg-black/90 flex items-center justify-center p-4"
-          onClick={e => { e.stopPropagation(); setBigImg(false); }}>
-          <img src={ann.imageUrl} alt={ann.title} className="max-w-full max-h-full rounded-2xl object-contain" />
-        </div>
-      )}
       <div
-        className="bg-white w-full max-w-lg rounded-t-3xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto"
+        className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-scale-in"
+        style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.25)" }}
         onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white px-5 pt-5 pb-3 flex items-start justify-between gap-3 border-b border-gray-50">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 flex-shrink-0 flex items-center justify-center border border-orange-100">
-              <Megaphone size={18} className="text-orange-500" />
-            </div>
-            <p className="font-bold text-gray-800 text-sm leading-snug">{ann.title}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 hover:bg-gray-200 transition-colors mt-0.5">
-            <X size={16} className="text-gray-500" />
-          </button>
-        </div>
+
         {ann.imageUrl && (
-          <div
-            className="relative cursor-zoom-in"
-            onClick={() => setBigImg(true)}>
+          <div className="relative flex-shrink-0">
             <img
               src={ann.imageUrl}
               alt={ann.title}
-              className="w-full object-cover max-h-56"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            <div className="absolute bottom-2 right-2 bg-black/40 rounded-full p-1.5">
-              <ZoomIn size={14} className="text-white" />
-            </div>
+              className="w-full h-52 object-cover"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           </div>
         )}
-        <div className="px-5 py-4">
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ann.content}</p>
-          <p className="text-[11px] text-gray-400 mt-4 pt-3 border-t border-gray-50">
-            {ann.authorName} · {formatDate(ann.createdAt)}
+
+        <div className="flex items-center justify-between px-5 pt-4 pb-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100">
+              <Megaphone size={15} className="text-orange-500" />
+            </div>
+            <span className="text-xs font-semibold text-orange-500 uppercase tracking-wide">ประกาศ</span>
+          </div>
+          <button
+            data-testid="button-close-announcement-modal-home"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className="px-5 pb-2 flex-shrink-0">
+          <h2 className="text-lg font-bold text-gray-900 leading-snug">{ann.title}</h2>
+          <p className="text-xs text-gray-400 mt-1">{ann.authorName} · {formatFullDate(ann.createdAt)}</p>
+        </div>
+
+        <div className="px-5 pb-6 overflow-y-auto flex-1">
+          <div className="w-full h-px bg-gray-100 mb-4" />
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+            {renderContent(ann.content)}
           </p>
         </div>
       </div>
