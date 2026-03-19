@@ -6,7 +6,6 @@ import { log } from "./index.js";
 import {
   notifyReportStatus,
   notifyAnnouncementCreated,
-  notifyAnnouncementDeleted,
   notifyNewRegistration,
   notifyAdminAction,
   notifyRedemption,
@@ -153,8 +152,7 @@ export async function registerRoutes(
       title: ann.title,
       content: ann.content,
       authorName: ann.authorName,
-      adminName: admin.name,
-      adminStudentId: admin.studentId,
+      imageUrl: ann.imageUrl,
     });
     notifyAdminAction({
       action: "สร้างประกาศ",
@@ -172,11 +170,6 @@ export async function registerRoutes(
     if (!success) return res.status(404).json({ message: "ไม่พบประกาศ" });
 
     const admin = req.adminUser!;
-    notifyAnnouncementDeleted({
-      title: ann?.title ?? req.params.id,
-      adminName: admin.name,
-      adminStudentId: admin.studentId,
-    });
     notifyAdminAction({
       action: "ลบประกาศ",
       detail: `หัวข้อ: "${ann?.title ?? req.params.id}"`,

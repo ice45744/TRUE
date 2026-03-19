@@ -40,6 +40,7 @@ interface Embed {
   description?: string;
   color: number;
   fields?: { name: string; value: string; inline?: boolean }[];
+  image?: { url: string };
   footer?: { text: string };
   timestamp?: string;
 }
@@ -103,35 +104,14 @@ export async function notifyAnnouncementCreated(opts: {
   title: string;
   content: string;
   authorName: string;
-  adminName: string;
-  adminStudentId: string;
+  imageUrl?: string | null;
 }) {
   await send(WEBHOOKS.ANNOUNCEMENTS, {
-    title: "📢 ประกาศใหม่",
+    title: `📢 ${opts.title}`,
+    description: opts.content.slice(0, 4000),
     color: COLOR.PURPLE,
-    fields: [
-      { name: "หัวข้อ", value: opts.title },
-      { name: "เนื้อหา", value: opts.content.slice(0, 300) },
-      { name: "ผู้เขียน", value: opts.authorName, inline: true },
-      { name: "Admin", value: `${opts.adminName} (${opts.adminStudentId})`, inline: true },
-    ],
-    footer: { text: `เวลา: ${thaiTime()}` },
-  });
-}
-
-export async function notifyAnnouncementDeleted(opts: {
-  title: string;
-  adminName: string;
-  adminStudentId: string;
-}) {
-  await send(WEBHOOKS.ANNOUNCEMENTS, {
-    title: "🗑️ ลบประกาศ",
-    color: COLOR.RED,
-    fields: [
-      { name: "หัวข้อที่ถูกลบ", value: opts.title },
-      { name: "Admin", value: `${opts.adminName} (${opts.adminStudentId})` },
-    ],
-    footer: { text: `เวลา: ${thaiTime()}` },
+    ...(opts.imageUrl ? { image: { url: opts.imageUrl } } : {}),
+    footer: { text: `โดย ${opts.authorName} · ${thaiTime()}` },
   });
 }
 
