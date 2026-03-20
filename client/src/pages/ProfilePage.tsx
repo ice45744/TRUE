@@ -239,14 +239,23 @@ export default function ProfilePage() {
       </p>
 
       {editOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setEditOpen(false)}>
-          <div className="bg-white rounded-t-3xl w-full max-w-md p-6 pb-10" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+          onClick={() => setEditOpen(false)}>
+          <div
+            className="bg-white rounded-3xl w-full max-w-sm p-6"
+            style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.22)" }}
+            onClick={e => e.stopPropagation()}>
+
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
                 <Pencil size={16} className="text-primary" /> แก้ไขข้อมูลส่วนตัว
               </h3>
-              <button onClick={() => setEditOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
+              <button
+                onClick={() => setEditOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+                <X size={16} className="text-gray-500" />
               </button>
             </div>
 
