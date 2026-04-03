@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Eye, EyeOff, User, Lock, IdCard, ShieldCheck, Sparkles } from "lucide-react";
+import { Eye, EyeOff, User, Lock, IdCard, ShieldCheck } from "lucide-react";
 
 function FloatingParticles() {
   const particles = [
@@ -71,52 +71,6 @@ function MorphBlobs() {
   );
 }
 
-function AnimatedLogo() {
-  return (
-    <div className="relative flex flex-col items-center animate-bounce-in">
-      <div className="relative">
-        <div
-          className="w-20 h-20 rounded-3xl flex items-center justify-center animate-pulse-glow"
-          style={{
-            background: "linear-gradient(135deg, #4F8EF7 0%, #7C3AED 50%, #EC4899 100%)",
-            backgroundSize: "200% 200%",
-            animation: "gradient-shift 4s ease infinite, pulse-glow 2.5s ease-in-out infinite",
-          }}
-        >
-          <GraduationCap className="w-10 h-10 text-white drop-shadow-lg" />
-        </div>
-        <div
-          className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center animate-pop-in stagger-3"
-          style={{ background: "linear-gradient(135deg, #FBBF24, #F59E0B)" }}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-white" />
-        </div>
-        <div
-          className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 h-3 w-14 rounded-full"
-          style={{
-            background: "radial-gradient(ellipse, rgba(79,142,247,0.25), transparent 70%)",
-            filter: "blur(2px)",
-          }}
-        />
-      </div>
-      <h1
-        className="mt-4 text-3xl font-extrabold tracking-tight animate-fade-in-up stagger-2"
-        style={{
-          background: "linear-gradient(135deg, #1E3A5F 0%, #2563EB 50%, #7C3AED 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundSize: "200% 200%",
-          animation: "gradient-shift 6s ease infinite",
-        }}
-      >
-        S.T.ก้าวหน้า
-      </h1>
-      <p className="text-sm text-gray-500 mt-1 animate-fade-in-up stagger-3 font-medium">
-        ระบบดิจิทัล สภานักเรียน
-      </p>
-    </div>
-  );
-}
 
 export default function AuthPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
@@ -262,10 +216,6 @@ export default function AuthPage() {
       <FloatingParticles />
 
       <div className="w-full max-w-sm relative z-10">
-        <div className="mb-7">
-          <AnimatedLogo />
-        </div>
-
         <div
           className={`relative rounded-3xl p-6 animate-fade-in-up stagger-3 ${formShake ? "animate-shake" : ""}`}
           style={{
