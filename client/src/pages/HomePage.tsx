@@ -288,7 +288,7 @@ export default function HomePage() {
       {selectedAnn && <AnnouncementModal ann={selectedAnn} onClose={() => setSelectedAnn(null)} />}
 
       <div className="px-4 mt-5 animate-fade-in-up stagger-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 responsive-grid-2 gap-3">
           {quickActions.map(({ label, icon: Icon, href, bg, iconColor, border }, i) => (
             <Link key={label} href={href}>
               <div className={`${bg} ${border} rounded-2xl p-4 flex flex-col gap-3 cursor-pointer card-interactive hover-elevate animate-fade-in-up stagger-${i + 1}`}>

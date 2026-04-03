@@ -99,13 +99,26 @@ A Thai school student digital system for managing goodness activities, stamp col
 - Bottom tab navigation (5 tabs for students, 5 tabs for admin)
 - Admin can use both student and admin pages
 
+## Responsive Design
+- **Mobile-first**: Default layout optimized for phones (320-512px)
+- **Tablet (768px+)**: Container widens to 40rem, grids expand to 3 columns
+- **Desktop (1024px+)**: Phone-like container (28rem) centered with shadow/border, desktop sidebar nav replaces bottom nav
+- **XL Desktop (1280px+)**: Container at 30rem
+- iOS safe area support: `viewport-fit=cover`, `env(safe-area-inset-*)` CSS variables
+- `apple-mobile-web-app-capable` + `mobile-web-app-capable` for PWA-like behavior
+- Touch-friendly: `min-height: 44px` on interactive elements for `pointer: coarse`
+- Hover effects only on `pointer: fine` devices (desktop mouse)
+- Uses `100svh` (small viewport height) for proper mobile browser support
+- CSS classes: `.app-container`, `.app-bg-desktop`, `.desktop-sidebar`, `.desktop-nav-item`, `.bottom-nav-mobile`, `.bottom-nav-safe`, `.responsive-grid-2`, `.responsive-grid-rewards`
+
 ## Animations & Micro-interactions
-- CSS keyframe animations: fadeInUp, fadeIn, scaleIn, slideDown, bounceIn, float, shimmer, popIn, wiggle, navSlideUp
-- Animation classes: animate-fade-in-up, animate-fade-in, animate-scale-in, animate-slide-down, animate-bounce-in, animate-float, animate-pop-in, animate-wiggle, animate-nav-slide
-- Stagger classes: stagger-1 through stagger-6 (50ms increments)
-- Interactive classes: card-interactive (scale-down on active), gradient-shimmer, tab-indicator (smooth sliding tabs)
+- CSS keyframe animations: fadeInUp, fadeIn, scaleIn, slideDown, bounceIn, float, shimmer, popIn, morph-blob, pulse-glow, gradient-shift, orbit, shake, ripple
+- Animation classes: animate-fade-in-up, animate-fade-in, animate-scale-in, animate-slide-down, animate-bounce-in, animate-float, animate-pop-in, animate-pulse-glow, animate-morph, animate-gradient, animate-shake
+- Stagger classes: stagger-1 through stagger-6 (80ms increments)
+- Interactive classes: card-interactive (hover lift on desktop, scale-down on mobile touch), tab-indicator (smooth sliding tabs)
+- Auth page: Morphing background blobs, floating particles, frosted glass card, input focus animations, form shake on error
 - Bottom nav: Icon scale + translate on active state, nav-dot expanding indicator
-- Frosted glass nav: bg-white/95 backdrop-blur-md
+- Frosted glass nav: bg-white/95 backdrop-blur-md with safe area padding
 - prefers-reduced-motion: All animations disabled for accessibility
 - Loading spinners: Consistent white border-spinner pattern across all buttons
 

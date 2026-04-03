@@ -340,7 +340,7 @@ function RewardsTab() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 responsive-grid-rewards gap-3">
           {[1,2,3,4].map(i => (
             <div key={i} className="bg-white rounded-2xl overflow-hidden animate-pulse border border-gray-100">
               <div className="h-32 bg-gray-100" />
@@ -359,7 +359,7 @@ function RewardsTab() {
           <p className="text-xs mt-1">รอการเพิ่มของรางวัลจากสภานักเรียน</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 responsive-grid-rewards gap-3">
           {(rewards ?? []).map((r, i) => {
             const canRedeem = (user?.trashPoints ?? 0) >= r.stampCost && r.stock !== 0;
             const soldOut = r.stock === 0;

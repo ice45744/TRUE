@@ -231,6 +231,75 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   return <Component />;
 }
 
+function DesktopStudentSidebar() {
+  const [location] = useLocation();
+  const tabs = [
+    { href: "/", label: "หน้าหลัก", icon: Home },
+    { href: "/activities", label: "กิจกรรม", icon: ClipboardList },
+    { href: "/announcements", label: "ประกาศ", icon: Megaphone },
+    { href: "/report", label: "แจ้งปัญหา", icon: AlertTriangle },
+    { href: "/profile", label: "โปรไฟล์", icon: User },
+  ];
+
+  return (
+    <div className="desktop-sidebar">
+      <div className="mb-4 px-1">
+        <p className="text-sm font-bold text-gray-800">S.T.ก้าวหน้า</p>
+        <p className="text-xs text-gray-400">ระบบดิจิทัล สภานักเรียน</p>
+      </div>
+      {tabs.map(({ href, label, icon: Icon }) => {
+        const active = href === "/" ? location === "/" : location.startsWith(href);
+        return (
+          <Link key={href} href={href}
+            className={`desktop-nav-item ${active ? "active" : ""}`}>
+            <Icon size={18} />
+            <span>{label}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function DesktopAdminSidebar() {
+  const [location] = useLocation();
+  const tabs = [
+    { href: "/admin", label: "แดชบอร์ด", icon: LayoutDashboard },
+    { href: "/admin/users", label: "นักเรียน", icon: Users },
+    { href: "/admin/activities", label: "กิจกรรม", icon: ClipboardList },
+    { href: "/admin/announcements", label: "ประกาศ", icon: Megaphone },
+    { href: "/admin/reports", label: "รายงาน", icon: AlertTriangle },
+    { href: "/admin/rewards", label: "ของรางวัล", icon: Gift },
+    { href: "/admin/qr", label: "สร้าง QR", icon: ShieldCheck },
+  ];
+
+  return (
+    <div className="desktop-sidebar">
+      <div className="mb-4 px-1">
+        <p className="text-sm font-bold text-indigo-700">Admin Panel</p>
+        <p className="text-xs text-gray-400">แผงควบคุมสภานักเรียน</p>
+      </div>
+      {tabs.map(({ href, label, icon: Icon }) => {
+        const isExact = href === "/admin";
+        const active = isExact ? location === href : location.startsWith(href);
+        return (
+          <Link key={href} href={href}
+            className={`desktop-nav-item ${active ? "active" : ""}`}>
+            <Icon size={18} />
+            <span>{label}</span>
+          </Link>
+        );
+      })}
+      <div className="mt-2 pt-2 border-t border-gray-100">
+        <Link href="/" className="desktop-nav-item text-rose-500 hover:text-rose-600">
+          <House size={18} />
+          <span>ออก Admin</span>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function AppShell() {
   const { user, isAdmin } = useAuth();
   const [location] = useLocation();
@@ -238,8 +307,10 @@ function AppShell() {
   const isAdminPage = location.startsWith("/admin");
 
   return (
-    <div className="min-h-screen" style={{ background: "#F0F4FA", fontFamily: "'Sarabun', 'Inter', sans-serif" }}>
-      <div className="max-w-lg mx-auto relative min-h-screen bg-transparent">
+    <div className="min-h-screen-safe app-bg-desktop safe-top" style={{ background: "#F0F4FA", fontFamily: "'Sarabun', 'Inter', sans-serif" }}>
+      {user && !isAuth && !isAdminPage && <DesktopStudentSidebar />}
+      {user && isAdmin && isAdminPage && <DesktopAdminSidebar />}
+      <div className="app-container">
         <Switch>
           <Route path="/auth" component={AuthPage} />
           <Route path="/" component={() => <ProtectedRoute component={HomePage} />} />
@@ -276,9 +347,9 @@ function StudentBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 safe-bottom animate-nav-slide"
+    <nav className="bottom-nav-mobile fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 bottom-nav-safe"
       style={{ boxShadow: "0 -2px 16px rgba(0,0,0,0.06)" }}>
-      <div className="flex items-center justify-around max-w-lg mx-auto">
+      <div className="flex items-center justify-around app-container !min-h-0">
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? location === "/" : location.startsWith(href);
           return (
@@ -311,9 +382,9 @@ function AdminBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 safe-bottom animate-nav-slide"
+    <nav className="bottom-nav-mobile fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 bottom-nav-safe"
       style={{ boxShadow: "0 -2px 16px rgba(0,0,0,0.06)" }}>
-      <div className="flex items-center justify-around max-w-lg mx-auto">
+      <div className="flex items-center justify-around app-container !min-h-0">
         {tabs.map(({ href, label, icon: Icon }) => {
           const isExact = href === "/admin";
           const active = isExact ? location === href : location.startsWith(href);

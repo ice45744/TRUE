@@ -308,3 +308,138 @@
     animation: none !important;
   }
 }
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.safe-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.bottom-nav-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+.app-container {
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100svh;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    max-width: 40rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-container {
+    max-width: 30rem;
+    box-shadow: 0 0 60px rgba(0,0,0,0.08);
+    border-left: 1px solid rgba(0,0,0,0.06);
+    border-right: 1px solid rgba(0,0,0,0.06);
+    background: #FFFFFF;
+  }
+
+  .app-bg-desktop {
+    background: linear-gradient(135deg, #E8EEFF 0%, #F0F4FF 30%, #F5F0FF 60%, #EEF3FB 100%) !important;
+  }
+}
+
+.desktop-sidebar {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .desktop-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: max(1rem, calc(50% - 30rem - 16rem));
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14rem;
+    gap: 0.25rem;
+  }
+
+  .bottom-nav-mobile {
+    display: none !important;
+  }
+}
+
+.desktop-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6B7280;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.desktop-nav-item:hover {
+  background: rgba(79, 142, 247, 0.08);
+  color: #374151;
+}
+.desktop-nav-item.active {
+  background: rgba(79, 142, 247, 0.12);
+  color: #2563EB;
+  font-weight: 600;
+}
+
+@supports (height: 100svh) {
+  .min-h-screen-safe {
+    min-height: 100svh;
+  }
+}
+@supports not (height: 100svh) {
+  .min-h-screen-safe {
+    min-height: 100vh;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  }
+}
+
+@media (pointer: coarse) {
+  .card-interactive:active {
+    transform: scale(0.97);
+  }
+  
+  .bottom-nav-mobile a,
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-grid-2 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .responsive-grid-rewards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .responsive-grid-rewards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
