@@ -278,13 +278,7 @@ function StampTab() {
         <Button
           data-testid="button-scan-stamp"
           className="w-full rounded-xl h-11 font-semibold text-sm bg-gray-900"
-          onClick={() => {
-            if (!isWithinScanTime()) {
-              toast({ title: "ไม่อยู่ในช่วงเวลาที่กำหนด", description: "QR แสตมป์ขยะใช้ได้เฉพาะเวลา 06:00 - 08:00 น. เท่านั้น", variant: "destructive" });
-              return;
-            }
-            setShowScanner(true);
-          }}
+          onClick={() => setShowScanner(true)}
           disabled={scanMutation.isPending}>
           <QrCode size={16} className="mr-2" />
           {scanMutation.isPending ? (
