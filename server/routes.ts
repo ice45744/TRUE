@@ -222,13 +222,14 @@ export async function registerRoutes(
     }
 
     const now = new Date();
-    const hour = now.getHours();
-    if (hour < 6 || hour >= 8) {
-      return res.status(403).json({ message: "QR Code ใช้ได้เฉพาะเวลา 06:00 - 08:00 น. เท่านั้น" });
+    const bangkokNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const hour = bangkokNow.getUTCHours();
+    if (qr.type === "checkin" && (hour < 6 || hour >= 8)) {
+      return res.status(403).json({ message: "QR Code ใช้ได้เฉพาะเวลา 06:00 - 08:00 น. (เวลาประเทศไทย) เท่านั้น" });
     }
 
     if (qr.type === "checkin") {
-      const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      const today = `${bangkokNow.getUTCFullYear()}-${bangkokNow.getUTCMonth()}-${bangkokNow.getUTCDate()}`;
       const dailyKey = `${userId}_${today}`;
       if (qr.usedBy.has(dailyKey)) {
         return res.status(409).json({ message: "คุณได้เช็คชื่อวันนี้ไปแล้ว" });
