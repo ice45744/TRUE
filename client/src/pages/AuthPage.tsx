@@ -216,6 +216,10 @@ export default function AuthPage() {
       <FloatingParticles />
 
       <div className="w-full max-w-sm relative z-10">
+        <h1 className="text-center text-2xl font-bold text-blue-700 mb-5 tracking-tight" style={{ textShadow: "0 1px 8px rgba(79,142,247,0.12)" }}>
+          S.T. ก้าวหน้า
+          <span className="block text-sm font-medium text-blue-400 mt-0.5">ระบบดิจิทัลสภานักเรียน</span>
+        </h1>
         <div
           className={`relative rounded-3xl p-6 animate-fade-in-up stagger-3 ${formShake ? "animate-shake" : ""}`}
           style={{

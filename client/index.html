@@ -11,10 +11,10 @@
     <!-- Primary Meta -->
     <title>S.T. ก้าวหน้า - ระบบดิจิทัล สภานักเรียน</title>
     <meta name="description" content="ระบบดิจิทัลสภานักเรียน S.T. ก้าวหน้า สำหรับการบันทึกกิจกรรมความดี เช็คชื่อ สะสมแต้ม และแลกรับของรางวัล" />
-    <meta name="keywords" content="สภานักเรียน, ระบบดิจิทัล, ระบบดิจิทัลสท, กิจกรรมความดี, เช็คชื่อ, แต้มความดี, แสตมป์, ธนาคารขยะ, ของรางวัล, S.T. ก้าวหน้า" />
+    <meta name="keywords" content="สภานักเรียน, ระบบดิจิทัล, กิจกรรมความดี, เช็คชื่อ, แต้มความดี, แสตมป์, ธนาคารขยะ, S.T. ก้าวหน้า" />
     <meta name="author" content="สภานักเรียน S.T. ก้าวหน้า" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#6366f1" />
+    <meta name="theme-color" content="#4F8EF7" />
     <meta name="google-site-verification" content="kpLP1aBsdjSYfxmaS3ZTZG1JlFwUWAivSTQbfbhsEGU" />
 
     <!-- Open Graph / Facebook / LINE -->
@@ -37,17 +37,63 @@
     <!-- Icons -->
     <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
     <link rel="shortcut icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" sizes="256x256" href="/favicon.png" />
 
-    <!-- Fonts -->
+    <!-- Fonts: only 4 weights needed, no italic -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+
+    <!-- Critical inline CSS: prevents blank flash before JS loads -->
+    <style>
+      *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+      html,body{height:100%;font-family:'Sarabun',system-ui,sans-serif;background:#F0F4FA}
+      #root{min-height:100vh;display:flex;flex-direction:column}
+      #app-loading{
+        position:fixed;inset:0;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;
+        background:linear-gradient(160deg,#F0F4FF 0%,#E8EEFF 30%,#F5F0FF 60%,#EEF3FB 100%);
+        z-index:9999;transition:opacity 0.3s ease;
+      }
+      #app-loading h1{
+        font-size:1.5rem;font-weight:700;color:#2563EB;
+        margin-bottom:0.5rem;letter-spacing:-0.01em;
+      }
+      #app-loading p{font-size:0.875rem;color:#94a3b8}
+      #app-loading .spinner{
+        width:36px;height:36px;border:3px solid rgba(79,142,247,0.2);
+        border-top-color:#4F8EF7;border-radius:50%;
+        animation:spin 0.8s linear infinite;margin-bottom:1rem;
+      }
+      @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
   </head>
   <body>
+    <!-- Loading screen shown before React boots (improves FCP) -->
+    <div id="app-loading" aria-hidden="true">
+      <div class="spinner"></div>
+      <h1>S.T. ก้าวหน้า</h1>
+      <p>ระบบดิจิทัลสภานักเรียน</p>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Hide loading screen once React mounts
+      document.addEventListener('DOMContentLoaded', function() {
+        var obs = new MutationObserver(function() {
+          var root = document.getElementById('root');
+          if (root && root.children.length > 0) {
+            var loader = document.getElementById('app-loading');
+            if (loader) { loader.style.opacity = '0'; setTimeout(function(){ loader.remove(); }, 300); }
+            obs.disconnect();
+          }
+        });
+        obs.observe(document.getElementById('root'), { childList: true });
+      });
+    </script>
   </body>
 </html>
