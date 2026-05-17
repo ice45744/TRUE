@@ -228,10 +228,11 @@ export async function registerRoutes(
       return res.status(403).json({ message: "QR Code ใช้ได้เฉพาะเวลา 06:00 - 08:00 น. (เวลาประเทศไทย) เท่านั้น" });
     }
 
+    // ✅ FIX: ใช้ DB เช็คการเช็คชื่อรายวัน (ไม่ใช้ in-memory) — เพื่อกัน restart แล้วหาย + time zone bug
     if (qr.type === "checkin") {
-      const today = `${bangkokNow.getUTCFullYear()}-${bangkokNow.getUTCMonth()}-${bangkokNow.getUTCDate()}`;
-      const dailyKey = `${userId}_${today}`;
-      if (qr.usedBy.has(dailyKey)) {
+      const todayBangkok = `${bangkokNow.getUTCFullYear()}-${bangkokNow.getUTCMonth()}-${bangkokNow.getUTCDate()}`;
+      const alreadyChecked = await storage.hasCheckedInToday(userId, todayBangkok);
+      if (alreadyChecked) {
         return res.status(409).json({ message: "คุณได้เช็คชื่อวันนี้ไปแล้ว" });
       }
     }
@@ -246,9 +247,7 @@ export async function registerRoutes(
     }
 
     if (qr.type === "checkin") {
-      const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-      const dailyKey = `${userId}_${today}`;
-      await storage.markQrUsed(token, dailyKey);
+      // ไม่ต้องเรียก markQrUsed สำหรับ checkin — DB activity คือหลักฐาน
       await storage.createActivity(userId, { type: "checkin", description: "เช็คชื่อผ่าน QR Code (+1 แต้มความดี)" });
       const updated = await storage.updateUserMerits(userId, 1);
       const { password: _, ...safeUser } = updated!;

@@ -41,6 +41,7 @@ export interface IStorage {
   getQrToken(token: string): Promise<QrToken | undefined>;
   markQrUsed(token: string, userId: string): Promise<boolean>;
   getCheckinQr(): Promise<QrToken | undefined>;
+  hasCheckedInToday(userId: string, bangkokDateStr: string): Promise<boolean>;
 
   getActivities(userId: string): Promise<Activity[]>;
   getAllActivities(): Promise<Activity[]>;
@@ -200,11 +201,29 @@ export class DbStorage implements IStorage {
 
   async createQrToken(type: "checkin" | "stamp", expiryMinutes?: number | null): Promise<QrToken> {
     if (type === "checkin") {
-      const existing = await this.getCheckinQr();
-      if (existing) return existing;
+      // Try to reuse token stored in DB (persists across restarts)
+      const settings = await this.getSystemSettings();
+      if (settings.checkinQrToken) {
+        const existing = this.qrTokens.get(settings.checkinQrToken);
+        if (existing) return existing;
+        // Restore token from DB into memory
+        const qr: QrToken = {
+          token: settings.checkinQrToken,
+          type: "checkin",
+          createdAt: new Date(),
+          expiresAt: null,
+          usedBy: new Set(),
+        };
+        this.qrTokens.set(qr.token, qr);
+        return qr;
+      }
+      // Create new permanent checkin QR and save to DB
       const token = `st-checkin-${randomUUID().slice(0, 8)}`;
       const qr: QrToken = { token, type, createdAt: new Date(), expiresAt: null, usedBy: new Set() };
       this.qrTokens.set(token, qr);
+      await db.update(systemSettings)
+        .set({ checkinQrToken: token })
+        .where(eq(systemSettings.id, DEFAULT_SETTINGS_ID));
       return qr;
     }
     const token = `st-stamp-${randomUUID().slice(0, 8)}`;
@@ -216,12 +235,22 @@ export class DbStorage implements IStorage {
   }
 
   async getCheckinQr(): Promise<QrToken | undefined> {
+    // Check memory first
     for (const qr of this.qrTokens.values()) {
-      if (qr.type === "checkin" && (!qr.expiresAt || new Date() <= qr.expiresAt)) {
-        return qr;
-      }
+      if (qr.type === "checkin") return qr;
     }
-    return undefined;
+    // Fall back to DB-stored token
+    const settings = await this.getSystemSettings();
+    if (!settings.checkinQrToken) return undefined;
+    const qr: QrToken = {
+      token: settings.checkinQrToken,
+      type: "checkin",
+      createdAt: new Date(),
+      expiresAt: null,
+      usedBy: new Set(),
+    };
+    this.qrTokens.set(qr.token, qr);
+    return qr;
   }
 
   async markQrUsed(token: string, userId: string): Promise<boolean> {
@@ -230,6 +259,18 @@ export class DbStorage implements IStorage {
     if (qr.usedBy.has(userId)) return false;
     qr.usedBy.add(userId);
     return true;
+  }
+
+  async hasCheckedInToday(userId: string, bangkokDateStr: string): Promise<boolean> {
+    // bangkokDateStr format: "2024-1-15" (year-month-day using Bangkok time)
+    const rows = await db.select().from(activities).where(
+      and(eq(activities.userId, userId), eq(activities.type, "checkin"))
+    );
+    return rows.some(a => {
+      const bangkokTime = new Date(a.createdAt.getTime() + 7 * 60 * 60 * 1000);
+      const actDate = `${bangkokTime.getUTCFullYear()}-${bangkokTime.getUTCMonth()}-${bangkokTime.getUTCDate()}`;
+      return actDate === bangkokDateStr;
+    });
   }
 
   async getActivities(userId: string): Promise<Activity[]> {

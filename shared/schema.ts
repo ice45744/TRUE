@@ -98,6 +98,7 @@ export const systemSettings = pgTable("system_settings", {
   maintenanceMode: integer("maintenance_mode").notNull().default(0),
   maintenanceMessage: text("maintenance_message").notNull().default("กรุณารอสักครู่ขณะนี้เซิร์ฟเวอร์เว็บไซต์กำลังปรับปรุง"),
   maintenanceUntil: timestamp("maintenance_until"),
+  checkinQrToken: text("checkin_qr_token"),
 });
 
 export const insertSystemSettingsSchema = createInsertSchema(systemSettings).extend({
