@@ -19,6 +19,19 @@ declare module "express-serve-static-core" {
   }
 }
 
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const userId = req.headers["x-user-id"] as string;
+  if (!userId) {
+    return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่" });
+  }
+  const user = await storage.getUser(userId);
+  if (!user) {
+    return res.status(401).json({ message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่" });
+  }
+  req.adminUser = user;
+  next();
+}
+
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const userId = req.headers["x-user-id"] as string;
   if (!userId) {
@@ -280,17 +293,25 @@ export async function registerRoutes(
   });
 
   // Activities
-  app.get("/api/activities/:userId", async (req, res) => {
+  app.get("/api/activities/:userId", requireAuth, async (req, res) => {
+    const requester = req.adminUser!;
+    if (requester.role !== "admin" && requester.id !== req.params.userId) {
+      return res.status(403).json({ message: "ไม่มีสิทธิ์ดูข้อมูลของผู้ใช้อื่น" });
+    }
     const acts = await storage.getActivities(req.params.userId);
     res.json(acts);
   });
 
-  app.post("/api/activities/:userId", async (req, res) => {
+  app.post("/api/activities/:userId", requireAuth, async (req, res) => {
     try {
+      const requester = req.adminUser!;
+      if (requester.role !== "admin" && requester.id !== req.params.userId) {
+        return res.status(403).json({ message: "ไม่มีสิทธิ์สร้างกิจกรรมให้ผู้ใช้อื่น" });
+      }
       log(`POST /api/activities/${req.params.userId}`);
       const result = insertActivitySchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
+        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.issues.map(i => i.message).join(", ") });
       }
       const user = await storage.getUser(req.params.userId);
       if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
@@ -306,17 +327,25 @@ export async function registerRoutes(
   });
 
   // Reports
-  app.get("/api/reports/:userId", async (req, res) => {
+  app.get("/api/reports/:userId", requireAuth, async (req, res) => {
+    const requester = req.adminUser!;
+    if (requester.role !== "admin" && requester.id !== req.params.userId) {
+      return res.status(403).json({ message: "ไม่มีสิทธิ์ดูข้อมูลของผู้ใช้อื่น" });
+    }
     const rpts = await storage.getReports(req.params.userId);
     res.json(rpts);
   });
 
-  app.post("/api/reports/:userId", async (req, res) => {
+  app.post("/api/reports/:userId", requireAuth, async (req, res) => {
     try {
+      const requester = req.adminUser!;
+      if (requester.role !== "admin" && requester.id !== req.params.userId) {
+        return res.status(403).json({ message: "ไม่มีสิทธิ์สร้างรายงานให้ผู้ใช้อื่น" });
+      }
       log(`POST /api/reports/${req.params.userId}`);
       const result = insertReportSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.message });
+        return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.issues.map(i => i.message).join(", ") });
       }
       const rpt = await storage.createReport(req.params.userId, result.data);
       res.status(201).json(rpt);

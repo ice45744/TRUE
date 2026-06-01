@@ -52,11 +52,16 @@ export const insertUserSchema = createInsertSchema(users).pick({
   name: true,
   password: true,
   schoolCode: true,
+}).extend({
+  studentId: z.string().min(4, "รหัสนักเรียนต้องมีอย่างน้อย 4 ตัวอักษร").max(20, "รหัสนักเรียนยาวเกินไป").regex(/^[a-zA-Z0-9ก-๙]+$/, "รหัสนักเรียนใช้ได้เฉพาะตัวเลขและตัวอักษร"),
+  name: z.string().min(2, "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร").max(100, "ชื่อยาวเกินไป"),
+  password: z.string().min(4, "รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร").max(100, "รหัสผ่านยาวเกินไป"),
+  schoolCode: z.string().max(100).optional(),
 });
 
 export const loginSchema = z.object({
-  studentId: z.string().min(1, "กรุณากรอกรหัสนักเรียน"),
-  password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
+  studentId: z.string().min(1, "กรุณากรอกรหัสนักเรียน").max(20),
+  password: z.string().min(1, "กรุณากรอกรหัสผ่าน").max(100),
 });
 
 export const insertAnnouncementSchema = createInsertSchema(announcements).pick({
@@ -64,19 +69,37 @@ export const insertAnnouncementSchema = createInsertSchema(announcements).pick({
   content: true,
   authorName: true,
   imageUrl: true,
+}).extend({
+  title: z.string().min(1, "กรุณากรอกหัวข้อ").max(200, "หัวข้อยาวเกินไป"),
+  content: z.string().min(1, "กรุณากรอกเนื้อหา").max(5000, "เนื้อหายาวเกินไป"),
+  authorName: z.string().min(1).max(100).optional(),
+  imageUrl: z.string().url("URL รูปภาพไม่ถูกต้อง").nullable().optional(),
 });
+
+const ACTIVITY_TYPES = ["goodness", "checkin", "stamp"] as const;
 
 export const insertActivitySchema = createInsertSchema(activities).pick({
   type: true,
   description: true,
   imageUrl: true,
+}).extend({
+  type: z.enum(ACTIVITY_TYPES, { errorMap: () => ({ message: "ประเภทกิจกรรมไม่ถูกต้อง" }) }),
+  description: z.string().min(1, "กรุณากรอกรายละเอียด").max(1000, "รายละเอียดยาวเกินไป"),
+  imageUrl: z.string().url("URL รูปภาพไม่ถูกต้อง").nullable().optional(),
 });
+
+const REPORT_CATEGORIES = ["สิ่งอำนวยความสะดวก", "ความปลอดภัย", "การเรียนการสอน", "สุขภาพ", "อื่นๆ"] as const;
 
 export const insertReportSchema = createInsertSchema(reports).pick({
   category: true,
   details: true,
   imageUrl: true,
   imageLink: true,
+}).extend({
+  category: z.string().min(1, "กรุณาเลือกหมวดหมู่").max(100),
+  details: z.string().min(10, "กรุณากรอกรายละเอียดอย่างน้อย 10 ตัวอักษร").max(2000, "รายละเอียดยาวเกินไป"),
+  imageUrl: z.string().url("URL รูปภาพไม่ถูกต้อง").nullable().optional(),
+  imageLink: z.string().url("URL ลิงก์รูปไม่ถูกต้อง").nullable().optional(),
 });
 
 export const updateProfileSchema = z.object({
