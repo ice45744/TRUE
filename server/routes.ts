@@ -294,31 +294,33 @@ export async function registerRoutes(
 
   // Activities
   app.get("/api/activities/:userId", requireAuth, async (req, res) => {
+    const userId = req.params.userId as string;
     const requester = req.adminUser!;
-    if (requester.role !== "admin" && requester.id !== req.params.userId) {
+    if (requester.role !== "admin" && requester.id !== userId) {
       return res.status(403).json({ message: "ไม่มีสิทธิ์ดูข้อมูลของผู้ใช้อื่น" });
     }
-    const acts = await storage.getActivities(req.params.userId);
+    const acts = await storage.getActivities(userId);
     res.json(acts);
   });
 
   app.post("/api/activities/:userId", requireAuth, async (req, res) => {
     try {
+      const userId = req.params.userId as string;
       const requester = req.adminUser!;
-      if (requester.role !== "admin" && requester.id !== req.params.userId) {
+      if (requester.role !== "admin" && requester.id !== userId) {
         return res.status(403).json({ message: "ไม่มีสิทธิ์สร้างกิจกรรมให้ผู้ใช้อื่น" });
       }
-      log(`POST /api/activities/${req.params.userId}`);
+      log(`POST /api/activities/${userId}`);
       const result = insertActivitySchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.issues.map(i => i.message).join(", ") });
       }
-      const user = await storage.getUser(req.params.userId);
+      const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
 
-      const act = await storage.createActivity(req.params.userId, result.data);
+      const act = await storage.createActivity(userId, result.data);
       const { password: _, ...safeUser } = user;
-      log(`Activity created (pending approval) for ${req.params.userId}`);
+      log(`Activity created (pending approval) for ${userId}`);
       res.status(201).json({ activity: act, user: safeUser });
     } catch (error: any) {
       log(`Error creating activity: ${error.message}`);
@@ -328,26 +330,28 @@ export async function registerRoutes(
 
   // Reports
   app.get("/api/reports/:userId", requireAuth, async (req, res) => {
+    const userId = req.params.userId as string;
     const requester = req.adminUser!;
-    if (requester.role !== "admin" && requester.id !== req.params.userId) {
+    if (requester.role !== "admin" && requester.id !== userId) {
       return res.status(403).json({ message: "ไม่มีสิทธิ์ดูข้อมูลของผู้ใช้อื่น" });
     }
-    const rpts = await storage.getReports(req.params.userId);
+    const rpts = await storage.getReports(userId);
     res.json(rpts);
   });
 
   app.post("/api/reports/:userId", requireAuth, async (req, res) => {
     try {
+      const userId = req.params.userId as string;
       const requester = req.adminUser!;
-      if (requester.role !== "admin" && requester.id !== req.params.userId) {
+      if (requester.role !== "admin" && requester.id !== userId) {
         return res.status(403).json({ message: "ไม่มีสิทธิ์สร้างรายงานให้ผู้ใช้อื่น" });
       }
-      log(`POST /api/reports/${req.params.userId}`);
+      log(`POST /api/reports/${userId}`);
       const result = insertReportSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง: " + result.error.issues.map(i => i.message).join(", ") });
       }
-      const rpt = await storage.createReport(req.params.userId, result.data);
+      const rpt = await storage.createReport(userId, result.data);
       res.status(201).json(rpt);
     } catch (error: any) {
       log(`Error creating report: ${error.message}`);
@@ -363,8 +367,9 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
-    const target = await storage.getUser(req.params.id);
-    const success = await storage.deleteUser(req.params.id);
+    const id = req.params.id as string;
+    const target = await storage.getUser(id);
+    const success = await storage.deleteUser(id);
     if (!success) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
 
     const admin = req.adminUser!;
@@ -372,7 +377,7 @@ export async function registerRoutes(
       action: "ลบผู้ใช้",
       detail: target
         ? `ลบ: ${target.name} (รหัส: ${target.studentId})`
-        : `ลบ user ID: ${req.params.id}`,
+        : `ลบ user ID: ${id}`,
       adminName: admin.name,
       adminStudentId: admin.studentId,
     });
@@ -387,11 +392,12 @@ export async function registerRoutes(
 
   // เมื่อ Admin อนุมัติกิจกรรมความดี ถึงจะให้คะแนน
   app.patch("/api/admin/activities/:id", requireAdmin, async (req, res) => {
+    const id = req.params.id as string;
     const { status } = req.body;
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
     }
-    const act = await storage.updateActivityStatus(req.params.id, status);
+    const act = await storage.updateActivityStatus(id, status);
     if (!act) return res.status(404).json({ message: "ไม่พบกิจกรรม" });
 
     if (status === "approved" && act.type === "goodness") {
@@ -419,11 +425,12 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/reports/:id", requireAdmin, async (req, res) => {
+    const id = req.params.id as string;
     const { status } = req.body;
     if (!["resolved", "rejected", "in_progress"].includes(status)) {
       return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
     }
-    const rpt = await storage.updateReportStatus(req.params.id, status);
+    const rpt = await storage.updateReportStatus(id, status);
     if (!rpt) return res.status(404).json({ message: "ไม่พบรายงาน" });
 
     const admin = req.adminUser!;
@@ -465,7 +472,7 @@ export async function registerRoutes(
     });
   });
 
-  app.delete("/api/admin/clear-all", requireAdmin, async (_req, res) => {
+  app.delete("/api/admin/clear-all", requireAdmin, async (req, res) => {
     try {
       await storage.clearAllData();
 
@@ -532,15 +539,16 @@ export async function registerRoutes(
   });
 
   app.delete("/api/rewards/:id", requireAdmin, async (req, res) => {
+    const id = req.params.id as string;
     const rewards = await storage.getRewards();
-    const reward = rewards.find(r => r.id === req.params.id);
-    const ok = await storage.deleteReward(req.params.id);
+    const reward = rewards.find(r => r.id === id);
+    const ok = await storage.deleteReward(id);
     if (!ok) return res.status(404).json({ message: "ไม่พบของรางวัล" });
 
     const admin = req.adminUser!;
     notifyAdminAction({
       action: "ลบของรางวัล",
-      detail: `รางวัล: "${reward?.title ?? req.params.id}"`,
+      detail: `รางวัล: "${reward?.title ?? id}"`,
       adminName: admin.name,
       adminStudentId: admin.studentId,
     });
