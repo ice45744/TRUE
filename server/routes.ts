@@ -89,7 +89,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/users/:id", async (req, res) => {
-    const user = await storage.getUser(req.params.id);
+    const user = await storage.getUser(req.params.id as string);
     if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
     const { password: _, ...safeUser } = user;
     res.json(safeUser);
@@ -97,15 +97,16 @@ export async function registerRoutes(
 
   app.patch("/api/users/:id", async (req, res) => {
     try {
+      const id = req.params.id as string;
       const requesterId = req.headers["x-user-id"] as string;
-      if (requesterId !== req.params.id) {
+      if (requesterId !== id) {
         return res.status(403).json({ message: "ไม่มีสิทธิ์แก้ไขข้อมูลนี้" });
       }
       const result = updateProfileSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
       }
-      const updated = await storage.updateUserProfile(req.params.id, result.data);
+      const updated = await storage.updateUserProfile(id, result.data);
       if (!updated) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
       const { password: _, ...safeUser } = updated;
       res.json(safeUser);
@@ -178,14 +179,15 @@ export async function registerRoutes(
   });
 
   app.delete("/api/announcements/:id", requireAdmin, async (req, res) => {
-    const ann = await storage.getAnnouncement(req.params.id);
-    const success = await storage.deleteAnnouncement(req.params.id);
+    const id = req.params.id as string;
+    const ann = await storage.getAnnouncement(id);
+    const success = await storage.deleteAnnouncement(id);
     if (!success) return res.status(404).json({ message: "ไม่พบประกาศ" });
 
     const admin = req.adminUser!;
     notifyAdminAction({
       action: "ลบประกาศ",
-      detail: `หัวข้อ: "${ann?.title ?? req.params.id}"`,
+      detail: `หัวข้อ: "${ann?.title ?? id}"`,
       adminName: admin.name,
       adminStudentId: admin.studentId,
     });
@@ -557,17 +559,18 @@ export async function registerRoutes(
   });
 
   app.post("/api/rewards/:id/redeem", async (req, res) => {
+    const id = req.params.id as string;
     const userId = req.headers["x-user-id"] as string;
     if (!userId) return res.status(401).json({ message: "ไม่ได้เข้าสู่ระบบ" });
     const rewards = await storage.getRewards();
-    const reward = rewards.find(r => r.id === req.params.id);
-    const result = await storage.createRedemption(userId, req.params.id);
+    const reward = rewards.find(r => r.id === id);
+    const result = await storage.createRedemption(userId, id);
     if (!result.ok) return res.status(400).json({ message: result.message });
 
     notifyRedemption({
       studentName: result.user!.name,
       studentId: result.user!.studentId,
-      rewardTitle: reward?.title ?? req.params.id,
+      rewardTitle: reward?.title ?? id,
       stampCost: reward?.stampCost ?? 0,
       remainingPoints: result.user!.trashPoints,
     });
