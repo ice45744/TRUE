@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type Report } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 interface SafeUser {
   id: string;
@@ -28,6 +28,10 @@ export default function AdminReports() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "resolved" | "rejected">("all");
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const onImageError = useCallback((url: string) => {
+    setFailedImages(prev => new Set(prev).add(url));
+  }, []);
 
   const { data: reports, isLoading, error } = useQuery<Report[]>({
     queryKey: ["/api/admin/reports"],
@@ -151,23 +155,30 @@ export default function AdminReports() {
                 <p className="text-sm text-gray-600 mb-2">{rpt.details}</p>
 
                 {imageToShow && (
-                  <div 
-                    className="mb-3 rounded-xl overflow-hidden border border-gray-100 cursor-pointer"
-                    onClick={() => setExpandedImage(imageToShow)}>
-                    <img 
-                      src={imageToShow} 
-                      alt="รูปประกอบการรายงาน"
-                      className="w-full max-h-48 object-cover hover:opacity-90 transition-opacity"
-                      onError={(e) => {
-                        const el = e.target as HTMLImageElement;
-                        el.style.display = 'none';
-                        el.parentElement!.innerHTML = `<a href="${imageToShow}" target="_blank" class="flex items-center gap-1 p-2 text-xs text-blue-500 hover:underline"><span>🔗 ดูรูปภาพ</span></a>`;
-                      }}
-                    />
-                    <p className="text-[10px] text-gray-400 text-center py-1 bg-gray-50">
-                      <ImageIcon size={10} className="inline mr-1" />กดเพื่อดูรูปเต็ม
-                    </p>
-                  </div>
+                  failedImages.has(imageToShow) ? (
+                    <a
+                      href={imageToShow}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center gap-1 p-2 text-xs text-blue-500 hover:underline mb-3">
+                      🔗 ดูรูปภาพ
+                    </a>
+                  ) : (
+                    <div
+                      className="mb-3 rounded-xl overflow-hidden border border-gray-100 cursor-pointer"
+                      onClick={() => setExpandedImage(imageToShow)}>
+                      <img
+                        src={imageToShow}
+                        alt="รูปประกอบการรายงาน"
+                        className="w-full max-h-48 object-cover hover:opacity-90 transition-opacity"
+                        onError={() => onImageError(imageToShow)}
+                      />
+                      <p className="text-[10px] text-gray-400 text-center py-1 bg-gray-50">
+                        <ImageIcon size={10} className="inline mr-1" />กดเพื่อดูรูปเต็ม
+                      </p>
+                    </div>
+                  )
                 )}
 
                 <div className="flex items-center justify-between">

@@ -10,7 +10,7 @@ if (!connectionString) {
 
 const pool = new Pool({
   connectionString,
-  ssl: connectionString.includes("neon.tech") ? { rejectUnauthorized: false } : undefined,
+  ssl: connectionString.includes("neon.tech") ? { rejectUnauthorized: true } : undefined,
 });
 
 export const db = drizzle(pool, { schema });

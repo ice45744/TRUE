@@ -49,7 +49,7 @@ function GoodnesTab() {
   const uploadImage = async (file: File) => {
     const formData = new FormData();
     formData.append("image", file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=baf409d03cf4975986f6d44b5a1a2919`, {
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_KEY}`, {
       method: "POST",
       body: formData,
     });

@@ -1,0 +1,1 @@
+- [Security fixes](security-fixes.md) — ImgBB key → VITE_IMGBB_KEY env var; XSS innerHTML removed; Neon TLS rejectUnauthorized:true

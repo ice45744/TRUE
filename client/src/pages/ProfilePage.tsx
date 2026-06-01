@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { User as UserType } from "@shared/schema";
 
-const IMGBB_KEY = "baf409d03cf4975986f6d44b5a1a2919";
+const IMGBB_KEY = import.meta.env.VITE_IMGBB_KEY as string;
 
 function getInitials(name: string) {
   const parts = name.trim().split(" ");

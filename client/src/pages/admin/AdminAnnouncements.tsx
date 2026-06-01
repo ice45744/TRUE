@@ -13,7 +13,7 @@ import type { Announcement } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
 
-const IMGBB_KEY = "baf409d03cf4975986f6d44b5a1a2919";
+const IMGBB_KEY = import.meta.env.VITE_IMGBB_KEY as string;
 
 async function uploadToImgBB(file: File): Promise<string> {
   const formData = new FormData();
